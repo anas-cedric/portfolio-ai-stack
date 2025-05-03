@@ -1,0 +1,9 @@
+fastapi
+redis
+openai
+pydantic
+python-dotenv
+requests
+pandas
+numpy
+langgraph

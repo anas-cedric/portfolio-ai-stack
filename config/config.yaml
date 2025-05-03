@@ -1,0 +1,76 @@
+# Data Storage Configuration
+storage:
+  supabase:
+    url: ${SUPABASE_URL}
+    key: ${SUPABASE_KEY}
+    tables:
+      - user_profiles
+      - portfolio_holdings
+      - transaction_history
+
+  timescale:
+    enabled: false  # To be implemented
+    host: ${TIMESCALE_HOST}
+    port: ${TIMESCALE_PORT}
+    database: ${TIMESCALE_DB}
+
+  pinecone:
+    enabled: true  # Now implemented
+    api_key: ${PINECONE_API_KEY}
+    environment: ${PINECONE_ENV}
+    index_name: ${PINECONE_INDEX_NAME}
+    dimensions: 1024  # Updated to match your Pinecone index configuration
+    model: "llama-text-embed-v2"  # Added model name
+
+# Data Sources Configuration
+data_sources:
+  alpaca:
+    api_key: ${ALPACA_API_KEY}
+    secret_key: ${ALPACA_SECRET_KEY}
+    base_url: ${ALPACA_BASE_URL}
+    data_feed: "iex"  # or "sip" for premium
+
+  macroeconomic:
+    enabled: false  # To be implemented
+    sources:
+      - fred
+      - world_bank
+      - imf
+
+# Feature Engineering Configuration
+features:
+  user_features:
+    - risk_profile
+    - investment_horizon
+    - tax_bracket
+  
+  market_features:
+    - price_data
+    - volatility
+    - volume
+    - technical_indicators
+
+  fund_features:
+    - expense_ratio
+    - historical_returns
+    - risk_metrics
+
+# Model Configuration
+models:
+  portfolio_construction:
+    type: "claude"
+    version: "3.7"
+    temperature: 0.7
+    
+  risk_analysis:
+    type: "o1_pro"
+    version: "latest"
+
+# Monitoring Configuration
+monitoring:
+  enabled: false  # To be implemented
+  metrics:
+    - model_performance
+    - decision_accuracy
+    - portfolio_returns
+    - risk_metrics 

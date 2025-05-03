@@ -1,0 +1,14 @@
+{
+    "risk_tolerance": "low",
+    "investment_goals": ["capital preservation", "income", "retirement"],
+    "time_horizon": "medium-term",
+    "age": 58,
+    "income": "high",
+    "retirement_timeline_years": 7,
+    "tax_bracket": "high",
+    "preferences": {
+        "sectors": ["utilities", "consumer staples", "healthcare"],
+        "avoid": ["speculative tech", "crypto", "emerging markets"],
+        "dividend_focus": true
+    }
+} 

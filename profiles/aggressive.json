@@ -1,0 +1,14 @@
+{
+    "risk_tolerance": "high",
+    "investment_goals": ["growth", "wealth accumulation"],
+    "time_horizon": "long-term",
+    "age": 32,
+    "income": "mid-range",
+    "retirement_timeline_years": 33,
+    "tax_bracket": "medium",
+    "preferences": {
+        "sectors": ["technology", "biotech", "renewable energy"],
+        "avoid": ["tobacco", "fossil fuels"],
+        "dividend_focus": false
+    }
+} 

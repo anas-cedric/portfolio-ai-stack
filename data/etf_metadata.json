@@ -1,0 +1,44 @@
+{
+  "VTI": {
+    "name": "Vanguard Total Stock Market ETF",
+    "description": "Provides broad exposure to the US stock market, including large, mid, and small-cap equity.",
+    "type": "Equity",
+    "region": "US"
+  },
+  "VB": {
+    "name": "Vanguard Small-Cap ETF",
+    "description": "Focuses on smaller US companies with growth potential.",
+    "type": "Equity",
+    "region": "US"
+  },
+  "VEA": {
+    "name": "Vanguard Developed Markets ETF",
+    "description": "Covers stocks from developed markets outside the US.",
+    "type": "Equity",
+    "region": "International"
+  },
+  "VSS": {
+    "name": "Vanguard FTSE All-World ex-US Small-Cap ETF",
+    "description": "Provides international small cap exposure.",
+    "type": "Equity",
+    "region": "International"
+  },
+  "VWO": {
+    "name": "Vanguard Emerging Markets ETF",
+    "description": "Provides exposure to stocks in emerging economies.",
+    "type": "Equity",
+    "region": "Emerging Markets"
+  },
+  "BND": {
+    "name": "Vanguard Total Bond Market ETF",
+    "description": "Broad exposure to US investment-grade bonds, including government and corporate bonds.",
+    "type": "Bond",
+    "region": "US"
+  },
+  "BNDX": {
+    "name": "Vanguard Total International Bond ETF",
+    "description": "Hedged exposure to investment-grade bonds issued outside the US.",
+    "type": "Bond",
+    "region": "International"
+  }
+}

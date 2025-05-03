@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-03-20T02:15:26.746337",
+  "query": "what's a good stock to buy?",
+  "processed_query": {
+    "query_type": "general",
+    "entities": {
+      "tickers": [
+        "WHAT",
+        "GOOD",
+        "STOCK",
+        "TO",
+        "BUY"
+      ],
+      "time_periods": [],
+      "asset_classes": [
+        "stock"
+      ]
+    },
+    "metadata_filters": null
+  },
+  "retrieval": {
+    "sources": [],
+    "relevance_scores": []
+  },
+  "response": {
+    "answer": "I encountered an issue while generating a response. Error generating response: Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-7-sonnet-20240620'}}",
+    "model": "",
+    "token_usage": {}
+  }
+}

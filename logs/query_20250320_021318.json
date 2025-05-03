@@ -1,0 +1,27 @@
+{
+  "timestamp": "2025-03-20T02:13:18.532608",
+  "query": "What's a good investment to make?",
+  "processed_query": {
+    "query_type": "general",
+    "entities": {
+      "tickers": [
+        "WHAT",
+        "GOOD",
+        "TO",
+        "MAKE"
+      ],
+      "time_periods": [],
+      "asset_classes": []
+    },
+    "metadata_filters": null
+  },
+  "retrieval": {
+    "sources": [],
+    "relevance_scores": []
+  },
+  "response": {
+    "answer": "I encountered an issue while generating a response. Error generating response: \"Could not resolve authentication method. Expected either api_key or auth_token to be set. Or for one of the `X-Api-Key` or `Authorization` headers to be explicitly omitted\"",
+    "model": "",
+    "token_usage": {}
+  }
+}
