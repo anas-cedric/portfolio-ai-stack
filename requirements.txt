@@ -1,9 +1,9 @@
 # supabase>=2.3.5
 python-dotenv==1.0.0
 # PyYAML==6.0.1
-# alpaca-trade-api==3.2.0
+alpaca-trade-api==3.2.0
 # pytest>=7.4.0
-# pandas>=1.5.0
+pandas>=1.5.0
 # requests>=2.28.0
 # fredapi>=0.5.0  # Federal Reserve Economic Data API
 # bls>=0.3.0      # Bureau of Labor Statistics API
