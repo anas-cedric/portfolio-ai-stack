@@ -18,6 +18,10 @@
     {
       "source": "/api/(.*)",
       "destination": "/src/api/portfolio_api.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ]
 }
