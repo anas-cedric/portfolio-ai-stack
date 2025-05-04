@@ -32,8 +32,6 @@ matplotlib>=3.7.0  # Visualization
 
 # Real-time data dependencies
 schedule>=1.2.0  # Job scheduling for real-time updates
-transformers>=4.31.0  # Hugging Face transformers for sentiment analysis
-torch>=2.0.0  # PyTorch for transformers (optional)
 beautifulsoup4>=4.12.0  # Web scraping
 newsapi-python>=0.2.7  # News API client
 finnhub-python>=2.4.17  # Finnhub API client
