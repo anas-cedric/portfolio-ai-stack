@@ -1,6 +1,6 @@
 supabase>=2.3.5
 python-dotenv==1.0.0
-PyYAML==6.0
+PyYAML==6.0.1
 alpaca-trade-api==3.0.2
 pytest>=7.4.0
 pandas>=1.5.0
