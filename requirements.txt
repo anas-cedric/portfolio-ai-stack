@@ -8,17 +8,32 @@ requests>=2.28.0
 fredapi>=0.5.0  # Federal Reserve Economic Data API
 bls>=0.3.0      # Bureau of Labor Statistics API
 us>=2.0.0       # Helper for US government APIs 
+pinecone>=2.2.2  # Vector database
 numpy>=1.24.0  # Numerical operations for vectors
 anthropic>=0.21.3  # Anthropic Claude SDK
 regex>=2023.10.3  # Advanced regex operations
 typing-extensions>=4.8.0  # Improved type hints
+langgraph>=0.0.19  # Agent orchestration framework
 pydantic>=2.0.0  # Data validation
 graphviz>=0.20  # Graph visualization
 redis>=5.0.0  # Redis client for caching
 google-generativeai>=0.3.2  # Google Gemini API
 
+# Document processing dependencies
+unstructured>=0.10.0  # Document processing framework
+unstructured-inference>=0.6.0  # Enhanced document processing capabilities
+pdfminer.six>=20221105  # PDF extraction
+pdf2image>=1.16.0  # Convert PDF to images
+pytesseract>=0.3.10  # OCR capabilities
+python-docx>=0.8.11  # DOCX file processing
+python-pptx>=0.6.21  # PowerPoint processing
+tabulate>=0.9.0  # Table formatting 
+matplotlib>=3.7.0  # Visualization
+
 # Real-time data dependencies
 schedule>=1.2.0  # Job scheduling for real-time updates
+transformers>=4.31.0  # Hugging Face transformers for sentiment analysis
+torch>=2.0.0  # PyTorch for transformers (optional)
 beautifulsoup4>=4.12.0  # Web scraping
 newsapi-python>=0.2.7  # News API client
 finnhub-python>=2.4.17  # Finnhub API client
