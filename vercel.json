@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "frontend/portfolio-advisor/next.config.js",
+      "use": "@vercel/next",
+      "config": {
+        "distDir": ".next"
+      }
+    },
+    {
+      "src": "src/api/portfolio_api.py",
+      "use": "@vercel/python",
+      "config": { 
+        "maxLambdaSize": "15mb",
+        "runtime": "python3.11" 
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/src/api/portfolio_api.py"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/portfolio-advisor"
+    }
+  ]
+}
