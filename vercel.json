@@ -2,11 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "frontend/portfolio-advisor/next.config.js",
-      "use": "@vercel/next",
-      "config": {
-        "distDir": ".next"
-      }
+      "src": "frontend/portfolio-advisor/package.json",
+      "use": "@vercel/next"
     },
     {
       "src": "src/api/portfolio_api.py",
@@ -21,10 +18,6 @@
     {
       "source": "/api/(.*)",
       "destination": "/src/api/portfolio_api.py"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/frontend/portfolio-advisor"
     }
   ]
 }
