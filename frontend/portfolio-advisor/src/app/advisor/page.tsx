@@ -49,7 +49,6 @@ export default function AdvisorPage() {
     // Don't set portfolioData to null here, wait until success/reset
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
 
       const payload = {
@@ -59,7 +58,7 @@ export default function AdvisorPage() {
       // Log the exact payload being sent
       console.log("Sending payload to backend:", JSON.stringify(payload, null, 2));
 
-      const response = await axios.post(`${apiUrl}/api/generate-portfolio-from-wizard`, 
+      const response = await axios.post(`/api/generate-portfolio-from-wizard`, 
         payload, // Send the payload
         {
           headers: {
