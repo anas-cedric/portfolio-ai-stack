@@ -14,14 +14,14 @@
       }
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/src/api/portfolio_api.py"
+      "src": "/api/(.*)",
+      "dest": "/src/api/portfolio_api.py"
     },
     {
-      "source": "/(.*)",
-      "destination": "/$1"
+      "src": "/(.*)",
+      "dest": "/frontend/portfolio-advisor/$1"
     }
   ]
 }
