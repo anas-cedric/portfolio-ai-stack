@@ -19,7 +19,15 @@ load_dotenv()
 
 # Supabase setup
 SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_ANON_KEY')
+# Prefer generic SUPABASE_KEY, fall back to legacy SUPABASE_ANON_KEY for backwards-compatibility
+SUPABASE_KEY = os.getenv('SUPABASE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+
+# Fail fast with a clear error if credentials are missing. This prevents obscure runtime crashes.
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError(
+        "Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_KEY (or SUPABASE_ANON_KEY) in your environment."
+    )
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 class MarketDataService:
