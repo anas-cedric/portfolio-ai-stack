@@ -191,16 +191,16 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
   const isCurrentQuestionAnswered = answers[currentQuestion.id] !== undefined;
 
   return (
-    <Card className="w-full max-w-2xl mx-auto my-8">
+    <Card className="glass-card w-full max-w-2xl mx-auto bg-white/20 backdrop-blur-md border border-white/30 rounded-lg shadow-lg">
       <CardHeader>
-        <CardTitle className="!text-black">Risk Tolerance Questionnaire</CardTitle> 
+        <CardTitle className="text-white">Risk Tolerance Questionnaire</CardTitle> 
         <Progress value={progress} className="mt-2" />
-        <p className="text-sm text-muted-foreground mt-1">Question {currentStep + 1} of {totalQuestions}</p>
+        <p className="text-sm text-white/80 mt-1">Question {currentStep + 1} of {totalQuestions}</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={(e) => e.preventDefault()}> 
           <fieldset>
-            <legend className="text-lg font-semibold mb-4 !text-black">{currentQuestion.text}</legend> 
+            <legend className="text-lg font-semibold mb-4 text-white drop-shadow-sm">{currentQuestion.text}</legend> 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               {currentQuestion.options.map((option) => {
                 const isSelected = answers[currentQuestion.id] === option.value;
@@ -229,6 +229,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
           onClick={handlePrevious}
           disabled={currentStep === 0}
           variant="outline"
+          className="bg-white/20 text-white hover:bg-white/30 border-white/30"
         >
           Previous
         </Button>
@@ -236,6 +237,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
           <Button 
             onClick={handleSubmit}
             disabled={!answers[currentQuestion.id]}
+            className="bg-white text-blue-600 hover:bg-blue-50"
           >
             Finish
           </Button>
@@ -243,6 +245,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
           <Button 
             onClick={handleNext}
             disabled={!answers[currentQuestion.id]}
+            className="bg-white text-blue-600 hover:bg-blue-50"
           >
             Next
           </Button>

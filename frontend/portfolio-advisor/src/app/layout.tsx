@@ -23,11 +23,11 @@ export default function RootLayout({
       <body className={`min-h-screen ${inter.variable} font-sans`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
-          <main className="container mx-auto px-4 py-8">
+          <main className="w-full min-h-screen">
             {children}
           </main>
         </ThemeProvider>
