@@ -20,7 +20,14 @@ export default function ChatInterface({
   portfolioData, 
   userPreferences, 
   apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development',
-  apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  // If NEXT_PUBLIC_API_URL is defined (even if it's an empty string) use it.
+  // Otherwise (undefined) fall back to localhost when running locally (development).
+  apiUrl =
+    process.env.NEXT_PUBLIC_API_URL !== undefined
+      ? process.env.NEXT_PUBLIC_API_URL
+      : process.env.NODE_ENV === 'development'
+        ? 'http://localhost:8000'
+        : '',
   onChatError,
   onApprove,
   onPortfolioUpdate
