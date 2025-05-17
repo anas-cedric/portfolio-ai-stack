@@ -138,6 +138,8 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
       
       if (data.updated_portfolio) {
         setLocalPortfolioData(data.updated_portfolio);
+        // Propagate the updated portfolio to the parent so the chart & asset list stay in sync
+        onPortfolioUpdate?.(data as unknown as PortfolioResponse);
       }
       
     } catch (error: any) {

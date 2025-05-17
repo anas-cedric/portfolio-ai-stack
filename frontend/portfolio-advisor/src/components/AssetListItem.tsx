@@ -11,8 +11,8 @@ interface AssetListItemProps {
     name: string;
     ticker: string;
     description?: string; // For the info tooltip
-    expenseRatio: number;
     weight: number;
+    // expenseRatio: number; // removed from display, kept here if needed for future
   };
 }
 
@@ -43,7 +43,6 @@ const AssetListItem: React.FC<AssetListItemProps> = ({ asset }) => {
         </div>
         <div className="text-right">
           <p className="font-semibold text-base">{(asset.weight * 100).toFixed(1)}%</p>
-          <p className="text-xs text-muted-foreground">{(asset.expenseRatio * 100).toFixed(2)}% ER</p>
         </div>
       </CardContent>
     </Card>
