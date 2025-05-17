@@ -47,18 +47,21 @@ export default function AdvisorPage() {
   const [userAge, setUserAge] = useState<number | ''>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const sampleAssetData = [
-    { name: 'Vanguard Total Bond', ticker: 'BND', description: 'Broad exposure to U.S. investment-grade bonds.', expenseRatio: 0.03 / 100, weight: 0.26, icon: 'V' },
-    { name: 'Vanguard Total Intl Bond', ticker: 'BNDX', description: 'Broad exposure to non-U.S. investment-grade bonds.', expenseRatio: 0.07 / 100, weight: 0.156, icon: 'V' },
-    { name: 'Vanguard Total Stock Market', ticker: 'VTI', description: 'Exposure to the entire U.S. stock market.', expenseRatio: 0.03 / 100, weight: 0.125, icon: 'V' },
-    { name: 'Vanguard Short-Term TIPS', ticker: 'VTIP', description: 'Protection against inflation with U.S. Treasury Inflation-Protected Securities.', expenseRatio: 0.03 / 100, weight: 0.104, icon: 'V' },
-    { name: 'Vanguard FTSE Developed', ticker: 'VEA', description: 'Exposure to developed stock markets outside the U.S.', expenseRatio: 0.03 / 100, weight: 0.088, icon: 'V' },
-  ];
+  // Dynamically build asset & chart data from backend portfolio when available
+  const dynamicAssetData = portfolioData?.portfolioData?.holdings?.map((h, index) => ({
+    name: h.name || h.ticker,
+    ticker: h.ticker,
+    weight: (h.percentage ?? 0) / 100, // convert percent to fraction 0-1
+    icon: 'V',
+    color: sampleChartColors[index % sampleChartColors.length],
+  }));
 
-  const sampleDonutData = sampleAssetData.map((asset, index) => ({
-    name: asset.ticker,
-    value: asset.weight * 100,
-    color: sampleChartColors[index % sampleChartColors.length] // Use predefined colors
+  const assetDataToDisplay = dynamicAssetData && dynamicAssetData.length > 0 ? dynamicAssetData : [];
+
+  const donutData = assetDataToDisplay.map(a => ({
+    name: a.ticker,
+    value: a.weight * 100,
+    color: a.color!,
   }));
 
   const handleStart = () => {
@@ -254,12 +257,11 @@ export default function AdvisorPage() {
                 <p className="text-sm text-gray-600 mb-4">The fund employs an indexing investment approach designed to track the performance of the FTSE Developed All Cap ex U.S. Index, a market-capitalization-weighted index that is made up of approximately 3,837 common stocks of large-, mid-, and small-cap companies located in Canada and the major markets of Europe and the Pacific region.</p>
                 
                 <div className="mb-4">
-                  <div className="grid grid-cols-3 mb-2">
+                  <div className="grid grid-cols-2 mb-2">
                     <div className="text-sm font-medium text-gray-500">Asset</div>
-                    <div className="text-sm font-medium text-gray-500 text-right">Expense Ratio</div>
-                    <div className="text-sm font-medium text-gray-500 text-right">Weights</div>
+                    <div className="text-sm font-medium text-gray-500 text-right">Weight</div>
                   </div>
-                  {sampleAssetData.map((asset, index) => (
+                  {assetDataToDisplay.map((asset, index) => (
                     <AssetListItem key={index} asset={asset} />
                   ))}
                 </div>
@@ -272,11 +274,11 @@ export default function AdvisorPage() {
                     <CardTitle className="text-2xl font-semibold text-white">Portfolio Allocation</CardTitle>
                   </CardHeader>
                   <CardContent className="h-[400px]">
-                    <PortfolioDonutChart data={sampleDonutData} />
+                    <PortfolioDonutChart data={donutData} />
                   </CardContent>
                   <CardFooter>
                     <ul className="text-white text-sm space-y-1">
-                      {sampleDonutData.map((entry, idx) => (
+                      {donutData.map((entry, idx) => (
                         <li key={idx} className="flex items-center">
                           <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: entry.color }}></span>
                           {entry.name}: {entry.value}%
