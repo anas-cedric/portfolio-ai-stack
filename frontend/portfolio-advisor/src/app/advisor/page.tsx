@@ -157,15 +157,15 @@ export default function AdvisorPage() {
     switch (currentStep) {
       case 'welcome':
         return (
-          <Card className="w-full max-w-lg mx-auto bg-white/20 backdrop-blur-md border border-white/30 rounded-lg shadow-lg">
+          <Card className="w-full max-w-lg mx-auto glass-card">
             <CardHeader>
-              <CardTitle className="text-center text-2xl text-white drop-shadow-sm">Welcome to Paige</CardTitle>
-              <p className="text-center text-sm pt-1 text-white drop-shadow-sm">
+              <CardTitle className="text-center text-3xl font-bold text-white drop-shadow-lg mb-2">Welcome to Paige</CardTitle>
+              <p className="text-center text-lg text-white/90 drop-shadow-sm font-medium">
                 Your AI-powered wealth advisor. Let's get started by understanding your risk tolerance.
               </p>
             </CardHeader>
             <CardContent className="flex justify-center">
-              <Button onClick={handleStart} className="bg-white text-blue-600 hover:bg-blue-50">Start Questionnaire</Button>
+              <Button onClick={handleStart} className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-8 py-3 text-lg rounded-xl shadow-lg backdrop-blur-sm border border-white/50">Start Questionnaire</Button>
             </CardContent>
           </Card>
         );
@@ -178,10 +178,10 @@ export default function AdvisorPage() {
         );
       case 'ageInput':
         return (
-          <Card className="w-full max-w-md mx-auto bg-white/20 backdrop-blur-md border border-white/30 rounded-lg shadow-lg">
+          <Card className="w-full max-w-md mx-auto glass-card">
             <CardHeader>
-              <CardTitle className="text-center text-white drop-shadow-sm">Tell us about yourself</CardTitle>
-              <p className="text-center text-sm pt-1 text-white drop-shadow-sm">Please, enter your age so we can tailor the portfolio allocation.</p>
+              <CardTitle className="text-center text-2xl font-bold text-white drop-shadow-lg mb-2">Tell us about yourself</CardTitle>
+              <p className="text-center text-lg text-white/90 drop-shadow-sm font-medium">Please enter your age so we can tailor the portfolio allocation.</p>
             </CardHeader>
             <CardContent className="space-y-4">
               {isLoading ? (
@@ -222,7 +222,7 @@ export default function AdvisorPage() {
                 <div className="flex space-x-4 justify-between w-full">
                   <Button 
                     variant="outline" 
-                    className="bg-white/20 text-white hover:bg-white/30 border-white/30"
+                    className="bg-white/20 text-white hover:bg-white/30 border-white/40 font-semibold px-6 py-2 rounded-xl"
                     onClick={() => setCurrentStep('questionnaire')}
                   >
                     Back
@@ -230,7 +230,7 @@ export default function AdvisorPage() {
                   <Button 
                     onClick={handleAgeSubmit}
                     disabled={!userAge}
-                    className="bg-white text-blue-600 hover:bg-blue-50"
+                    className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-6 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-white/50"
                   >
                     <span>Next</span>
                     <svg className="ml-2 w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -242,61 +242,86 @@ export default function AdvisorPage() {
         );
       case 'results':
         return (
-          <div className="w-full flex-grow flex flex-col"> 
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold text-gray-800">Your Portfolio Recommendation</h1>
-              <Button variant="outline" onClick={() => { setCurrentStep('welcome'); setPortfolioData(null); /* Reset other states if needed */ }}>
-                Start Over
-              </Button>
-            </div>
+          <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6"> 
+            <div className="max-w-7xl mx-auto">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h1 className="text-4xl font-bold text-gray-900 mb-2">Your Portfolio Recommendation</h1>
+                  <p className="text-lg text-gray-600">Designed specifically for your risk profile and goals</p>
+                </div>
+                <Button variant="outline" className="bg-white shadow-sm hover:shadow-md" onClick={() => { setCurrentStep('welcome'); setPortfolioData(null); }}>
+                  Start Over
+                </Button>
+              </div>
 
-            <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Left Column: Asset List */}
-              <div className="md:col-span-2 space-y-4 overflow-y-auto pr-2" style={{ maxHeight: 'calc(100vh - 250px)' }}>
-                <h2 className="text-xl font-semibold text-gray-700 mb-3">Hi, Sergey! Based on your profile, I've designed this portfolio for you:</h2>
-                <p className="text-sm text-gray-600 mb-4">The fund employs an indexing investment approach designed to track the performance of the FTSE Developed All Cap ex U.S. Index, a market-capitalization-weighted index that is made up of approximately 3,837 common stocks of large-, mid-, and small-cap companies located in Canada and the major markets of Europe and the Pacific region.</p>
-                
-                <div className="mb-4">
-                  <div className="grid grid-cols-2 mb-2">
-                    <div className="text-sm font-medium text-gray-500">Asset</div>
-                    <div className="text-sm font-medium text-gray-500 text-right">Weight</div>
-                  </div>
-                  {assetDataToDisplay.map((asset, index) => (
-                    <AssetListItem key={index} asset={asset} />
-                  ))}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column: Portfolio Details */}
+                <div className="lg:col-span-2 space-y-6">
+                  <Card className="bg-white shadow-lg border-0 rounded-2xl p-6">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-2xl font-bold text-gray-900 mb-2">Portfolio Details</CardTitle>
+                      <p className="text-gray-600 leading-relaxed">Based on your risk profile, I've designed this diversified portfolio to help you achieve your financial goals while managing risk appropriately.</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4 py-3 border-b border-gray-100 font-semibold text-gray-700">
+                          <div>Asset</div>
+                          <div className="text-right">Allocation</div>
+                        </div>
+                        {assetDataToDisplay.map((asset, index) => (
+                          <AssetListItem key={index} asset={asset} />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Column: Chart Visualization */}
+                <div className="lg:col-span-1">
+                  <Card className="bg-gradient-to-br from-slate-900 to-slate-800 shadow-xl border-0 rounded-2xl overflow-hidden">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="text-2xl font-bold text-white mb-2">Portfolio Allocation</CardTitle>
+                      <p className="text-slate-300 text-sm">Visual breakdown of your investment distribution</p>
+                    </CardHeader>
+                    <CardContent className="h-[400px] flex items-center justify-center">
+                      <PortfolioDonutChart data={donutData} />
+                    </CardContent>
+                    <CardFooter className="pt-0">
+                      <div className="w-full">
+                        <h4 className="text-white font-semibold mb-3">Legend</h4>
+                        <div className="grid gap-2">
+                          {donutData.map((entry, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-white/10 rounded-lg p-2 backdrop-blur-sm">
+                              <div className="flex items-center">
+                                <span className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: entry.color }}></span>
+                                <span className="text-white text-sm font-medium">{entry.name}</span>
+                              </div>
+                              <span className="text-white font-semibold">{entry.value.toFixed(1)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardFooter>
+                  </Card>
                 </div>
               </div>
 
-              {/* Right Column: Donut Chart & Legend */}
-              <div className="md:col-span-1 w-full flex flex-col space-y-4 p-6 bg-slate-900 rounded-lg">
-                <Card className="bg-transparent border-none shadow-none">
-                  <CardHeader>
-                    <CardTitle className="text-2xl font-semibold text-white">Portfolio Allocation</CardTitle>
+              {/* Chat Interface */}
+              <div className="mt-8">
+                <Card className="bg-white shadow-lg border-0 rounded-2xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+                    <CardTitle className="text-xl font-bold text-gray-900">Chat with Paige</CardTitle>
+                    <p className="text-gray-600 text-sm">Ask questions or request adjustments to your portfolio</p>
                   </CardHeader>
-                  <CardContent className="h-[400px]">
-                    <PortfolioDonutChart data={donutData} />
+                  <CardContent className="p-0">
+                    <ChatInterface 
+                      portfolioData={portfolioData?.portfolioData} 
+                      userPreferences={portfolioData?.userPreferences}
+                      onPortfolioUpdate={handlePortfolioUpdate} 
+                    />
                   </CardContent>
-                  <CardFooter>
-                    <ul className="text-white text-sm space-y-1">
-                      {donutData.map((entry, idx) => (
-                        <li key={idx} className="flex items-center">
-                          <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: entry.color }}></span>
-                          {entry.name}: {entry.value}%
-                        </li>
-                      ))}
-                    </ul>
-                  </CardFooter>
                 </Card>
               </div>
-            </div>
-
-            {/* Chat Interface at the bottom */}
-            <div className="mt-auto pt-6">
-              <ChatInterface 
-                portfolioData={portfolioData?.portfolioData} 
-                userPreferences={portfolioData?.userPreferences}
-                onPortfolioUpdate={handlePortfolioUpdate} 
-              />
             </div>
           </div>
         );

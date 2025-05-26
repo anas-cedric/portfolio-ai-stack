@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Info } from 'lucide-react'; // Using lucide-react for icons
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // For the info icon
 
@@ -18,18 +17,20 @@ interface AssetListItemProps {
 
 const AssetListItem: React.FC<AssetListItemProps> = ({ asset }) => {
   return (
-    <Card className="mb-3 hover:shadow-lg transition-shadow duration-200">
-      <CardContent className="p-4 flex items-center justify-between">
-        <div className="flex items-center">
-          {asset.icon && <div className="mr-3 text-2xl text-primary">{asset.icon}</div>}
+    <div className="py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors duration-200 rounded-lg px-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+            {asset.ticker.charAt(0)}
+          </div>
           <div>
-            <div className="flex items-center">
-              <h3 className="font-semibold text-base mr-1">{asset.name}</h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="font-semibold text-gray-900">{asset.name}</h3>
               {asset.description && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info size={16} className="text-muted-foreground cursor-pointer" />
+                      <Info size={14} className="text-gray-400 cursor-pointer hover:text-gray-600" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{asset.description}</p>
@@ -38,14 +39,14 @@ const AssetListItem: React.FC<AssetListItemProps> = ({ asset }) => {
                 </TooltipProvider>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{asset.ticker}</p>
+            <p className="text-sm text-gray-500 font-medium">{asset.ticker}</p>
           </div>
         </div>
         <div className="text-right">
-          <p className="font-semibold text-base">{(asset.weight * 100).toFixed(1)}%</p>
+          <div className="text-lg font-bold text-gray-900">{(asset.weight * 100).toFixed(1)}%</div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

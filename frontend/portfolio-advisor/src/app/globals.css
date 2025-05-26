@@ -20,16 +20,31 @@
     @apply text-xl font-semibold mb-2;
   }
   
-  /* Added custom background classes */
+  /* Enhanced background matching Figma design */
   .clouds-bg {
+    background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 25%, #60a5fa 50%, #93c5fd 100%);
     background-image: url('/images/cloud-background.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    background-blend-mode: soft-light;
+    min-height: 100vh;
   }
   
+  /* Enhanced glass morphism matching Figma */
   .glass-card {
-    @apply bg-white bg-opacity-20 backdrop-blur-md rounded-xl border border-white border-opacity-30;
+    @apply bg-white/25 backdrop-blur-xl rounded-2xl border border-white/40 shadow-2xl;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+                0 0 0 1px rgba(255, 255, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Enhanced glass card for questionnaire */
+  .glass-card-questionnaire {
+    @apply bg-white/30 backdrop-blur-xl rounded-2xl border border-white/50 shadow-2xl;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 
+                0 0 0 1px rgba(255, 255, 255, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
   }
   :root {
     --background: 0 0% 100%;

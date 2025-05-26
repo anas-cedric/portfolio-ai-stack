@@ -191,16 +191,16 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
   const isCurrentQuestionAnswered = answers[currentQuestion.id] !== undefined;
 
   return (
-    <Card className="glass-card w-full max-w-2xl mx-auto bg-white/20 backdrop-blur-md border border-white/30 rounded-lg shadow-lg">
+    <Card className="glass-card-questionnaire w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-white">Risk Tolerance Questionnaire</CardTitle> 
-        <Progress value={progress} className="mt-2" />
-        <p className="text-sm text-white/80 mt-1">Question {currentStep + 1} of {totalQuestions}</p>
+        <CardTitle className="text-2xl font-bold text-white drop-shadow-lg mb-2">Risk Tolerance Questionnaire</CardTitle> 
+        <Progress value={progress} className="mt-3" />
+        <p className="text-lg text-white/90 mt-2 font-medium">Question {currentStep + 1} of {totalQuestions}</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={(e) => e.preventDefault()}> 
           <fieldset>
-            <legend className="text-lg font-semibold mb-4 text-white drop-shadow-sm">{currentQuestion.text}</legend> 
+            <legend className="text-xl font-semibold mb-6 text-white drop-shadow-lg leading-relaxed">{currentQuestion.text}</legend> 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
               {currentQuestion.options.map((option) => {
                 const isSelected = answers[currentQuestion.id] === option.value;
@@ -208,11 +208,9 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
                   <Button
                     key={option.value}
                     variant={undefined} 
-                    className={`h-auto justify-start p-4 text-left whitespace-normal transition-colors ${isSelected
-                        // Selected: Darker blue bg, white text
-                        ? 'bg-sky-600 hover:bg-sky-700 text-white'
-                        // Unselected: Pastel blue bg, dark blue text
-                        : 'bg-sky-200 hover:bg-sky-300 text-sky-800'
+                    className={`h-auto justify-start p-4 text-left whitespace-normal transition-all duration-200 rounded-xl font-medium ${isSelected
+                        ? 'bg-white/90 text-blue-700 shadow-lg scale-105 border-2 border-blue-300'
+                        : 'bg-white/60 text-gray-800 hover:bg-white/80 border border-white/40 shadow-md'
                     }`}
                     onClick={() => handleOptionChange(option.value)}
                   >
@@ -229,7 +227,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
           onClick={handlePrevious}
           disabled={currentStep === 0}
           variant="outline"
-          className="bg-white/20 text-white hover:bg-white/30 border-white/30"
+          className="bg-white/20 text-white hover:bg-white/30 border-white/40 font-semibold px-6 py-2 rounded-xl"
         >
           Previous
         </Button>
@@ -237,7 +235,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
           <Button 
             onClick={handleSubmit}
             disabled={!answers[currentQuestion.id]}
-            className="bg-white text-blue-600 hover:bg-blue-50"
+            className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-8 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-white/50"
           >
             Finish
           </Button>
@@ -245,7 +243,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
           <Button 
             onClick={handleNext}
             disabled={!answers[currentQuestion.id]}
-            className="bg-white text-blue-600 hover:bg-blue-50"
+            className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-8 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-white/50"
           >
             Next
           </Button>
