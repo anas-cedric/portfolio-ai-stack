@@ -326,7 +326,11 @@ export default function Home() {
               ...portfolioData.userPreferences,
               firstName: firstName || portfolioData.userPreferences?.firstName
             }}
-            onApprove={() => console.log('Portfolio approved!')}
+            onApprove={() => {
+              console.log('Portfolio approved!');
+              // Navigate to thank you page
+              window.location.href = '/thank-you';
+            }}
             onPortfolioUpdate={handlePortfolioUpdate}
             onStartOver={handleStartOver}
           />

@@ -32,6 +32,7 @@ const ETF_SECTORS: Record<string, { sector: string; color: string }> = {
 };
 
 export default function AllocationSidebar({ portfolioData, onApprove }: AllocationSidebarProps) {
+  console.log('AllocationSidebar onApprove:', typeof onApprove, !!onApprove);
   // Build holdings data (individual assets)
   const holdingsData = portfolioData.holdings.map(holding => ({
     name: holding.ticker,
@@ -61,7 +62,7 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
     .sort((a, b) => b.value - a.value);
 
   return (
-    <aside className="bg-[#00090F] text-white flex flex-col gap-8 w-[560px] p-10 relative">
+    <aside className="bg-[#00090F] text-white flex flex-col gap-8 w-[560px] p-10 relative h-full overflow-y-auto">
       {/* Title + Tabs */}
       <div className="flex flex-col gap-5 w-full">
         <h2 className="font-inter-display text-[36px] font-medium leading-[44px] w-full">
@@ -133,7 +134,7 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
 
       {/* Approve button */}
       {onApprove && (
-        <div className="w-full flex justify-center mt-8">
+        <div className="w-full flex justify-center mt-auto mb-4">
           <Button
             onClick={onApprove}
             className="bg-[#12A594] hover:bg-[#0e8f80] text-white rounded-full w-full max-w-[400px] h-14 font-medium text-base"
