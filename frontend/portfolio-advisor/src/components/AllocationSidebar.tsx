@@ -62,82 +62,85 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
     .sort((a, b) => b.value - a.value);
 
   return (
-    <aside className="bg-[#00090F] text-white flex flex-col gap-8 w-[560px] p-10 relative h-full overflow-y-auto">
-      {/* Title + Tabs */}
-      <div className="flex flex-col gap-5 w-full">
-        <h2 className="font-inter-display text-[36px] font-medium leading-[44px] w-full">
-          Portfolio Allocation
-        </h2>
-        <Tabs defaultValue="holdings" className="w-full">
-          <TabsList className="gap-2 bg-transparent p-0 h-auto w-fit">
-            <TabsTrigger 
-              value="holdings" 
-              className="relative bg-transparent text-white/60 border border-white/20 rounded-full px-4 py-2 font-medium transition-all aria-selected:bg-white aria-selected:text-[#00121F] aria-selected:border-white data-[state=active]:bg-white data-[state=active]:text-[#00121F] data-[state=active]:border-transparent"
-            >
-              Holdings
-            </TabsTrigger>
-            <TabsTrigger
-              value="sectors"
-              className="relative bg-transparent text-white/60 border border-white/20 rounded-full px-4 py-2 font-medium transition-all aria-selected:bg-white aria-selected:text-[#00121F] aria-selected:border-white data-[state=active]:bg-white data-[state=active]:text-[#00121F] data-[state=active]:border-transparent"
-            >
-              Sectors
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="holdings" className="pt-8 w-full flex flex-col items-center gap-6">
-            {/* Holdings Donut Chart */}
-            <div className="relative w-[320px] h-[320px]">
-              <PortfolioDonutChart data={holdingsData} showCenterText={false} />
-            </div>
-            {/* Holdings Legend */}
-            <div className="w-full max-h-[200px] overflow-y-auto dark-scrollbar">
-              <div className="space-y-2 pr-2">
-                {holdingsData.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-white text-sm">{item.name}</span>
-                    </div>
-                    <span className="text-white/60 text-sm">{item.value.toFixed(1)}%</span>
-                  </div>
-                ))}
+    <aside className="bg-[#00090F] text-white flex flex-col w-[560px] relative h-full">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto p-10 pb-[120px]">
+        {/* Title + Tabs */}
+        <div className="flex flex-col gap-5 w-full">
+          <h2 className="font-inter-display text-[36px] font-medium leading-[44px] w-full">
+            Portfolio Allocation
+          </h2>
+          <Tabs defaultValue="holdings" className="w-full">
+            <TabsList className="gap-2 bg-transparent p-0 h-auto w-fit">
+              <TabsTrigger 
+                value="holdings" 
+                className="relative bg-transparent text-white/60 border border-white/20 rounded-full px-4 py-2 font-medium transition-all aria-selected:bg-white aria-selected:text-[#00121F] aria-selected:border-white data-[state=active]:bg-white data-[state=active]:text-[#00121F] data-[state=active]:border-transparent"
+              >
+                Holdings
+              </TabsTrigger>
+              <TabsTrigger
+                value="sectors"
+                className="relative bg-transparent text-white/60 border border-white/20 rounded-full px-4 py-2 font-medium transition-all aria-selected:bg-white aria-selected:text-[#00121F] aria-selected:border-white data-[state=active]:bg-white data-[state=active]:text-[#00121F] data-[state=active]:border-transparent"
+              >
+                Sectors
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="holdings" className="pt-8 w-full flex flex-col items-center gap-6">
+              {/* Holdings Donut Chart */}
+              <div className="relative w-[320px] h-[320px]">
+                <PortfolioDonutChart data={holdingsData} showCenterText={false} />
               </div>
-            </div>
-          </TabsContent>
-          <TabsContent value="sectors" className="pt-8 w-full flex flex-col items-center gap-6">
-            {/* Sectors Donut Chart */}
-            <div className="relative w-[320px] h-[320px]">
-              <PortfolioDonutChart data={sectorsData} showCenterText={false} />
-            </div>
-            {/* Sectors Legend */}
-            <div className="w-full max-h-[200px] overflow-y-auto dark-scrollbar">
-              <div className="space-y-2 pr-2">
-                {sectorsData.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <span className="text-white text-sm">{item.name}</span>
+              {/* Holdings Legend */}
+              <div className="w-full max-h-[200px] overflow-y-auto dark-scrollbar">
+                <div className="space-y-2 pr-2">
+                  {holdingsData.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-white text-sm">{item.name}</span>
+                      </div>
+                      <span className="text-white/60 text-sm">{item.value.toFixed(1)}%</span>
                     </div>
-                    <span className="text-white/60 text-sm">{item.value.toFixed(1)}%</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+            <TabsContent value="sectors" className="pt-8 w-full flex flex-col items-center gap-6">
+              {/* Sectors Donut Chart */}
+              <div className="relative w-[320px] h-[320px]">
+                <PortfolioDonutChart data={sectorsData} showCenterText={false} />
+              </div>
+              {/* Sectors Legend */}
+              <div className="w-full max-h-[200px] overflow-y-auto dark-scrollbar">
+                <div className="space-y-2 pr-2">
+                  {sectorsData.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-white text-sm">{item.name}</span>
+                      </div>
+                      <span className="text-white/60 text-sm">{item.value.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
-      {/* Approve button */}
+      {/* Fixed Approve button at bottom */}
       {onApprove && (
-        <div className="w-full flex justify-center mt-auto mb-4">
+        <div className="absolute bottom-0 left-0 right-0 p-10 bg-[#00090F]">
           <Button
             onClick={onApprove}
-            className="bg-[#12A594] hover:bg-[#0e8f80] text-white rounded-full w-full max-w-[400px] h-14 font-medium text-base"
+            className="bg-[#12A594] hover:bg-[#0e8f80] text-white rounded-full w-full h-14 font-medium text-base"
           >
             ✓ Approve Portfolio
           </Button>

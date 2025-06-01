@@ -31,6 +31,22 @@ const InfoIcon = () => (
   </svg>
 );
 
+// ETF expense ratios based on actual current data
+const ETF_EXPENSE_RATIOS: Record<string, number> = {
+  'VTI': 0.03,   // Vanguard Total Stock Market ETF
+  'VUG': 0.04,   // Vanguard Growth ETF  
+  'VBR': 0.07,   // Vanguard Small-Cap Value ETF
+  'VEA': 0.05,   // Vanguard FTSE Developed Markets ETF
+  'VSS': 0.11,   // Vanguard FTSE All-World ex-US Small-Cap ETF
+  'VWO': 0.08,   // Vanguard FTSE Emerging Markets ETF
+  'VNQ': 0.12,   // Vanguard Real Estate ETF
+  'VNQI': 0.12,  // Vanguard Global ex-U.S. Real Estate ETF
+  'BND': 0.035,  // Vanguard Total Bond Market ETF
+  'BNDX': 0.05,  // Vanguard Total International Bond ETF
+  'VTIP': 0.04,  // Vanguard Short-Term Inflation-Protected Securities ETF
+  'CASH': 0.00   // Cash has no expense ratio
+};
+
 const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver }) => {
   const [showScrollTop, setShowScrollTop] = React.useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -138,7 +154,9 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                         </div>
                       </TableCell>
                       <TableCell className="text-right py-4">
-                        <span className="text-sm text-[#00121F]">0.03%</span>
+                        <span className="text-sm text-[#00121F]">
+                          {(ETF_EXPENSE_RATIOS[holding.ticker] || 0.03).toFixed(2)}%
+                        </span>
                       </TableCell>
                       <TableCell className="text-right py-4">
                         <span className="text-sm text-[#00121F] font-medium">{holding.percentage.toFixed(1)}%</span>
