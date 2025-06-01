@@ -291,7 +291,7 @@ Remember: You're their trusted financial advisor, not a chatbot.`
   return (
     <div className="relative w-full">
       {/* Chat input */}
-      <div className="bg-gradient-to-t from-[#E6EFF3] via-[#E6EFF3] to-transparent pt-8 pb-6">
+      <div>
         <form
           onSubmit={handleSubmit}
           className="flex items-center bg-white/80 backdrop-blur-[24px] border border-white/20 rounded-full shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(0,0,0,0.08)]"

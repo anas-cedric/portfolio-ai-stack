@@ -152,7 +152,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
           </div>
 
           {/* Fixed chat area at bottom using ChatInterface component */}
-          <div className="absolute bottom-0 left-0 right-0 z-40">
+          <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#E6EFF3] via-[#E6EFF3] to-transparent pt-8 pb-6">
             <div className="max-w-[744px] mx-auto px-8">
               <ChatInterface 
                 portfolioData={portfolioData} 
