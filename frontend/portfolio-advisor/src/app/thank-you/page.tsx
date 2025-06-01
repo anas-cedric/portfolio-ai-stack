@@ -8,7 +8,7 @@ export default function ThankYouPage() {
     <div className="w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center">
       <div className="relative w-full h-screen flex items-center justify-center">
         {/* Glassmorphism Form Card */}
-        <div className="relative w-[488px] h-[374px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10 flex flex-col gap-20">
+        <div className="relative w-[488px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10 flex flex-col gap-8">
           {/* Logo Container */}
           <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
             {/* Paige Logo Text */}
@@ -18,7 +18,7 @@ export default function ThankYouPage() {
           </div>
 
           {/* Content Container */}
-          <div className="flex flex-col gap-7">
+          <div className="flex flex-col gap-6">
             {/* Title Container */}
             <div className="flex flex-col gap-3">
               <h1 className="text-[36px] leading-[44px] font-medium text-white font-inter-display">
@@ -31,7 +31,7 @@ export default function ThankYouPage() {
 
             {/* Button */}
             <Link href="/">
-              <button className="w-full h-14 bg-white rounded-full flex items-center justify-between px-8 py-4 group hover:bg-white/95 transition-all duration-200">
+              <button className="w-full h-14 bg-white rounded-full flex items-center justify-between px-8 py-4 group hover:bg-white/95 transition-all duration-200 mt-2">
                 <span className="text-[16px] leading-[24px] font-medium text-[#00121F] font-inter mx-auto">
                   Return Home
                 </span>
