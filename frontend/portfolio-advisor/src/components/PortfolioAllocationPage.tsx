@@ -24,7 +24,7 @@ interface PortfolioAllocationPageProps {
 }
 
 const InfoIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-60 hover:opacity-100 cursor-help transition-opacity">
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity">
     <circle cx="7" cy="7" r="6.25" stroke="currentColor" strokeWidth="1.5" fill="none"/>
     <circle cx="7" cy="4.5" r="0.875" fill="currentColor"/>
     <line x1="7" y1="6.5" x2="7" y2="10.5" stroke="currentColor" strokeWidth="1.5"/>
@@ -138,13 +138,17 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                     <TableHead className="text-right text-[#00121F]/50 text-xs font-normal pb-3">
                       <div className="flex items-center justify-end gap-1">
                         Expense Ratio
-                        <Tooltip>
+                        <Tooltip delayDuration={300}>
                           <TooltipTrigger asChild>
-                            <button type="button" className="inline-flex items-center">
+                            <button 
+                              type="button" 
+                              className="inline-flex items-center hover:bg-gray-100 rounded p-1 -m-1 transition-colors"
+                              aria-label="More information about expense ratios"
+                            >
                               <InfoIcon />
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>
+                          <TooltipContent side="top" className="bg-gray-900 text-white border-gray-800">
                             <p>The annual fee charged by the fund as a percentage of your investment. Lower expense ratios mean more of your money stays invested.</p>
                           </TooltipContent>
                         </Tooltip>
@@ -167,13 +171,17 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                                 {holding.name || holding.ticker}
                               </span>
                               {ETF_DESCRIPTIONS[holding.ticker] && (
-                                <Tooltip>
+                                <Tooltip delayDuration={300}>
                                   <TooltipTrigger asChild>
-                                    <button type="button" className="inline-flex items-center">
+                                    <button 
+                                      type="button" 
+                                      className="inline-flex items-center hover:bg-gray-100 rounded p-1 -m-1 transition-colors"
+                                      aria-label={`More information about ${holding.ticker}`}
+                                    >
                                       <InfoIcon />
                                     </button>
                                   </TooltipTrigger>
-                                  <TooltipContent className="max-w-[300px]">
+                                  <TooltipContent side="top" className="max-w-[300px] bg-gray-900 text-white border-gray-800">
                                     <p>{ETF_DESCRIPTIONS[holding.ticker]}</p>
                                   </TooltipContent>
                                 </Tooltip>
