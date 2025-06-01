@@ -724,8 +724,11 @@ async def process_portfolio_chat(
                     holdings_json_str = json.dumps(updated_portfolio.get("holdings", []))
                     notes = updated_portfolio.get("notes")
                     expl_prompt = FinancialPrompts.get_allocation_explanation_prompt(user_message, holdings_json_str, notes)
+                    # Get system instructions from metadata if provided by frontend
+                    system_instructions = metadata.get("system_instructions")
                     model_resp = await openai_client.generate_text(
                         expl_prompt,
+                        system_instruction=system_instructions,
                         max_output_tokens=4096 # Substantially increase token limit for conversational responses
                     )
                     response_message = model_resp.get("text", "") if isinstance(model_resp, dict) else str(model_resp)
