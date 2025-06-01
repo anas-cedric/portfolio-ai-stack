@@ -191,65 +191,129 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
   const isCurrentQuestionAnswered = answers[currentQuestion.id] !== undefined;
 
   return (
-    <Card className="glass-card-questionnaire w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-white drop-shadow-lg mb-2">Risk Tolerance Questionnaire</CardTitle> 
-        <Progress value={progress} className="mt-3" />
-        <p className="text-lg text-white/90 mt-2 font-medium">Question {currentStep + 1} of {totalQuestions}</p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={(e) => e.preventDefault()}> 
-          <fieldset>
-            <legend className="text-xl font-semibold mb-6 text-white drop-shadow-lg leading-relaxed">{currentQuestion.text}</legend> 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-              {currentQuestion.options.map((option) => {
-                const isSelected = answers[currentQuestion.id] === option.value;
-                return (
-                  <Button
-                    key={option.value}
-                    variant={undefined} 
-                    className={`h-auto justify-start p-4 text-left whitespace-normal transition-all duration-200 rounded-xl font-medium ${isSelected
-                        ? 'bg-white/90 text-blue-700 shadow-lg scale-105 border-2 border-blue-300'
-                        : 'bg-white/60 text-gray-800 hover:bg-white/80 border border-white/40 shadow-md'
+    <div 
+      className="absolute flex flex-col items-start gap-12 w-[616px] h-[667px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
+      style={{
+        left: 'calc(50% - 616px/2)',
+        top: 'calc(50% - 667px/2)',
+        boxSizing: 'border-box'
+      }}
+    >
+      {/* Top Section */}
+      <div className="flex flex-row justify-between items-center w-[536px] h-[26px]">
+        {/* Logo */}
+        <div className="flex items-center justify-center w-[77px] h-[26px] border border-white rounded-full">
+          <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
+            Paige<span className="align-super text-[10px] ml-1">&reg;</span>
+          </span>
+        </div>
+        
+        {/* Progress */}
+        <div className="flex flex-row items-center gap-4 w-[225px] h-[20px]">
+          <span className="w-[109px] h-[20px] text-[14px] leading-[20px] font-normal text-white/80 font-inter">
+            Question {currentStep + 1} of {totalQuestions}
+          </span>
+          <div className="flex flex-row items-center w-[100px] h-[8px] bg-white/20 rounded-full">
+            {Array.from({ length: totalQuestions }, (_, index) => (
+              <div
+                key={index}
+                className={`flex-1 h-[8px] ${
+                  index <= currentStep ? 'bg-white' : 'bg-transparent'
+                } ${
+                  index === 0 ? 'rounded-l-full' : 
+                  index === totalQuestions - 1 ? 'rounded-r-full' : ''
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section */}
+      <div className="flex flex-col items-start gap-7 w-[536px] h-[513px]">
+        {/* Question Text */}
+        <h2 className="w-[536px] text-[22px] leading-[140%] font-medium text-white font-inter-display">
+          {currentQuestion.text}
+        </h2>
+
+        {/* Options List */}
+        <div className="flex flex-col items-start gap-3 w-[536px]">
+          {currentQuestion.options.map((option) => {
+            const isSelected = answers[currentQuestion.id] === option.value;
+            return (
+              <div
+                key={option.value}
+                className={`flex flex-row items-start justify-between w-[536px] bg-white/10 border border-white/10 rounded-[16px] p-4 cursor-pointer transition-all duration-200 ${
+                  isSelected ? 'bg-white/20 border-white/20' : 'hover:bg-white/15'
+                }`}
+                onClick={() => handleOptionChange(option.value)}
+                style={{ minHeight: '56px' }}
+              >
+                <span className="flex-1 text-[16px] leading-[24px] font-medium text-white font-inter pr-2">
+                  {option.label}
+                </span>
+                <div className="flex items-center justify-center w-[24px] h-[24px] p-[2px]">
+                  <div 
+                    className={`w-[20px] h-[20px] rounded-full border transition-all duration-200 ${
+                      isSelected 
+                        ? 'bg-white border-white' 
+                        : 'bg-white/10 border-white/30'
                     }`}
-                    onClick={() => handleOptionChange(option.value)}
                   >
-                    {option.label}
-                  </Button>
-                );
-              })}
+                    {isSelected && (
+                      <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                        <div className="w-[8px] h-[8px] rounded-full bg-blue-600" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Button Group */}
+        <div className="flex flex-row justify-between items-start gap-6 w-[536px] h-[56px]">
+          {/* Back Button */}
+          <button
+            onClick={handlePrevious}
+            disabled={currentStep === 0}
+            className={`flex items-center justify-center px-8 py-4 h-[56px] bg-white/30 rounded-full transition-all duration-200 ${
+              currentStep === 0 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-white/40'
+            }`}
+          >
+            <span className="text-[16px] leading-[24px] font-medium text-white font-inter">
+              Back
+            </span>
+          </button>
+
+          {/* Next/Finish Button */}
+          <button
+            onClick={isLastStep ? handleSubmit : handleNext}
+            disabled={!isCurrentQuestionAnswered}
+            className={`flex items-center justify-between px-8 py-4 h-[56px] w-[288px] bg-white rounded-full transition-all duration-200 ${
+              !isCurrentQuestionAnswered 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-white/90'
+            }`}
+          >
+            <span className="text-[16px] leading-[24px] font-medium text-[#00121F] font-inter">
+              {isLastStep ? 'Finish' : 'Next'}
+            </span>
+            <div className="w-[28px] h-[28px] bg-gray-400 rounded-full flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path 
+                  d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z" 
+                  fill="white"
+                />
+              </svg>
             </div>
-          </fieldset>
-        </form>
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button
-          onClick={handlePrevious}
-          disabled={currentStep === 0}
-          variant="outline"
-          className="bg-white/20 text-white hover:bg-white/30 border-white/40 font-semibold px-6 py-2 rounded-xl"
-        >
-          Previous
-        </Button>
-        {isLastStep ? (
-          <Button 
-            onClick={handleSubmit}
-            disabled={!answers[currentQuestion.id]}
-            className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-8 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-white/50"
-          >
-            Finish
-          </Button>
-        ) : (
-          <Button 
-            onClick={handleNext}
-            disabled={!answers[currentQuestion.id]}
-            className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-8 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-white/50"
-          >
-            Next
-          </Button>
-        )}
-      </CardFooter>
-    </Card>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

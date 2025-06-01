@@ -11,6 +11,9 @@ export interface UserProfile {
   monthly_contribution: number;
   sector_preferences?: string[]; // Optional
   avoid_sectors?: string[]; // Optional
+  firstName?: string; // Optional, for personalization
+  lastName?: string; // Optional, for personalization
+  birthday?: string; // Optional, for age calculation
 }
 
 // Matches the Holding model (implicitly defined in Python recalculate_holdings)

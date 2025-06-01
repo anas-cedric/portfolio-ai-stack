@@ -1,20 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function Home() {
-  const router = useRouter();
-  
-  useEffect(() => {
-    // Redirect to advisor page immediately
-    router.push('/advisor');
-  }, [router]);
-  
-  // Return landing page content as fallback while redirecting
   return (
     <div className="max-w-4xl mx-auto">
       <Card className="text-center mb-16 p-8">

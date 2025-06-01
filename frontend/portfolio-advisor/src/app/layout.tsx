@@ -8,6 +8,12 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const interDisplay = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter-display",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Paige - AI-powered Wealth Advisor",
   description: "Chat with Paige to build and refine your investment portfolio",
@@ -20,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`min-h-screen ${inter.variable} font-sans`}>
+      <body className={`min-h-screen ${inter.variable} ${interDisplay.variable} font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

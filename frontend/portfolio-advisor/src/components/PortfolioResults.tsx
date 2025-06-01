@@ -51,12 +51,15 @@ export default function PortfolioResults({
       </CardHeader>
 
       <CardContent>
-        <ChatInterface 
-          portfolioData={portfolioData} 
-          userPreferences={userPreferences} 
-          onApprove={handleApprove} 
-          onPortfolioUpdate={onPortfolioUpdate}
-        />
+        {/* Removed surrounding Card so ChatInterface bottom bar can render flush with parent page */}
+        <div className="mt-4">
+          <ChatInterface 
+            portfolioData={portfolioData} 
+            userPreferences={userPreferences} 
+            onApprove={handleApprove} 
+            onPortfolioUpdate={onPortfolioUpdate}
+          />
+        </div>
         <Card className="mt-6"> 
           <CardHeader>
             <CardTitle className="text-lg">Allocation</CardTitle> 

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, FormEvent } from 'react';
 import axios from 'axios'; 
 import { Message, PortfolioData, UserProfile, PortfolioResponse, BackendChatMessage } from '@/lib/types'; 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ArrowRight } from 'lucide-react';
 
 interface ChatInterfaceProps {
   portfolioData?: PortfolioData; 
@@ -13,7 +13,7 @@ interface ChatInterfaceProps {
   apiUrl?: string;
   onChatError?: (message: string) => void;
   onApprove?: () => void; 
-  onPortfolioUpdate?: (updatedPortfolioResponse: PortfolioResponse) => void; 
+  onPortfolioUpdate?: (updatedPortfolioResponse: PortfolioResponse) => void;
 }
 
 export default function ChatInterface({
@@ -66,7 +66,19 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
   }, [portfolioData, userPreferences]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll to the bottom when new messages are added
+    if (messages.length > 1) {
+      // Find the parent scrollable container
+      const scrollableContainer = document.querySelector('.overflow-y-auto');
+      if (scrollableContainer) {
+        setTimeout(() => {
+          scrollableContainer.scrollTo({ 
+            top: scrollableContainer.scrollHeight, 
+            behavior: 'smooth' 
+          });
+        }, 100);
+      }
+    }
   }, [messages]);
 
   const formatPercentage = (value: number) => {
@@ -103,7 +115,7 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
     setIsLoading(true);
     
     try {
-      const response = await axios.post(`${apiUrl}/api/portfolio-chat`, {
+      const response = await axios.post(`/api/portfolio-chat`, {
         conversation_id: conversationId,
         user_message: messageContent,
         conversation_history: messages.map(m => ({ role: m.role, content: m.content })),
@@ -196,7 +208,7 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
       console.log('Sending update payload:', JSON.stringify(payload, null, 2));
 
       const response = await axios.post<PortfolioResponse> 
-        (`${apiUrl}/api/update-portfolio-from-chat`, payload, {
+        (`/api/update-portfolio-from-chat`, payload, {
           headers: {
             'x-api-key': apiKey,
             'Content-Type': 'application/json',
@@ -214,78 +226,83 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
     }
   };
 
+  // Add messages to the scrollable container when they exist
+  useEffect(() => {
+    if (messages.length > 1) {
+      const scrollContainer = document.querySelector('.overflow-y-auto');
+      if (scrollContainer) {
+        const existingMessages = scrollContainer.querySelector('.chat-messages-container');
+        if (existingMessages) {
+          existingMessages.remove();
+        }
+        
+        // Create messages container
+        const messagesDiv = document.createElement('div');
+        messagesDiv.className = 'chat-messages-container mt-8 space-y-4 max-w-[744px] mx-auto';
+        
+        messages.slice(1).forEach((message) => {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = `flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`;
+          
+          const contentDiv = document.createElement('div');
+          contentDiv.className = `max-w-[75%] rounded-2xl px-4 py-3 ${
+            message.role === 'user' 
+              ? 'bg-[#00121F]/5 text-[#00121F]' 
+              : 'text-[#00121F]'
+          }`;
+          contentDiv.textContent = message.content;
+          
+          messageDiv.appendChild(contentDiv);
+          messagesDiv.appendChild(messageDiv);
+        });
+        
+        // Add loading indicator if needed
+        if (isLoading) {
+          const loadingDiv = document.createElement('div');
+          loadingDiv.className = 'flex justify-start';
+          loadingDiv.innerHTML = '<div class="text-sm text-[#00121F]/50">Thinking...</div>';
+          messagesDiv.appendChild(loadingDiv);
+        }
+        
+        // Add to the main content area after the analysis section
+        const mainContent = scrollContainer.querySelector('.max-w-\\[744px\\]');
+        if (mainContent) {
+          mainContent.appendChild(messagesDiv);
+        }
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }, 100);
+      }
+    }
+  }, [messages, isLoading]);
+
   return (
-    <div className="flex flex-col h-[600px] border border-gray-200 rounded-lg overflow-hidden bg-white shadow-md">
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-        {messages.map((message, index) => (
-          <div 
-            key={index} 
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              // Change text-gray-800 to text-black for assistant messages
-              className={`max-w-[75%] rounded-lg px-4 py-2 ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}
-            >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] rounded-lg px-4 py-3 bg-white border border-gray-300 text-gray-800 shadow-sm">
-              <div className="flex space-x-1.5">
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.15s' }}></div>
-                <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      
-      <div className="p-4 border-t border-gray-200 bg-white">
-        {portfolioData && (
-          <div className="flex flex-wrap gap-2 mb-3 justify-end">
-            <Button 
-              onClick={handlePortfolioUpdate} 
-              size="sm" 
-              variant="outline" 
-              disabled={isUpdatingPortfolio || isLoading} 
-              className="text-xs"
-            >
-              {isUpdatingPortfolio ? (
-                <>
-                  <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce mr-2"></div>
-                  Updating...
-                </>
-              ) : (
-                "Update Portfolio"
-              )}
-            </Button>
-            {onApprove && (
-              <Button 
-                onClick={onApprove} 
-                size="sm" 
-                disabled={isUpdatingPortfolio || isLoading} 
-                className="bg-green-600 hover:bg-green-700 text-white text-xs"
-              >
-                Approve Portfolio
-              </Button>
-            )}
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-          <Input
-            type="text"
+    <div className="relative w-full">
+      {/* Chat input */}
+      <div className="bg-gradient-to-t from-[#E6EFF3] via-[#E6EFF3] to-transparent pt-8 pb-6">
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center bg-white/80 backdrop-blur-[24px] border border-white/20 rounded-full shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(0,0,0,0.08)]"
+        >
+          <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about your portfolio..."
+            placeholder="Ask about your portfolio"
             disabled={isLoading}
+            className="flex-1 bg-transparent outline-none text-[16px] leading-[24px] text-[#00121F] placeholder:text-[#00121F]/40 px-6 py-4"
           />
-          <Button type="submit" disabled={isLoading}>
-            Send
-          </Button>
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="mr-2 w-10 h-10 rounded-full bg-[#096EA0] hover:bg-[#075a85] flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12H19" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M15 8L19 12L15 16" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </form>
       </div>
     </div>

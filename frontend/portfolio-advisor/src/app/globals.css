@@ -2,10 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom scrollbar styles */
+@layer utilities {
+  /* Remove scrollbar borders and outlines */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    border: none;
+    outline: none;
+    border-radius: 3px;
+  }
+  
+  /* Firefox */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 18, 31, 0.1) transparent;
+  }
+}
+
+/* Dark sidebar scrollbar */
+.dark-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Light scrollbar for portfolio page */
+.light-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.light-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.light-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.light-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
+  --font-inter-display: var(--font-inter-display);
   --font-mono: system-ui, monospace;
 }
 
@@ -20,15 +85,23 @@
     @apply text-xl font-semibold mb-2;
   }
   
+  .font-inter {
+    font-family: var(--font-inter), sans-serif;
+  }
+  
+  .font-inter-display {
+    font-family: var(--font-inter-display), sans-serif;
+  }
+  
   /* Enhanced background matching Figma design */
   .clouds-bg {
-    background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 25%, #60a5fa 50%, #93c5fd 100%);
+    background: #FFFFFF;
     background-image: url('/images/cloud-background.png');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-blend-mode: soft-light;
     min-height: 100vh;
+    position: relative;
   }
   
   /* Enhanced glass morphism matching Figma */

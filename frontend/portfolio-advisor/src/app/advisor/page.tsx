@@ -7,6 +7,7 @@ import PortfolioResults from '@/components/PortfolioResults';
 import ChatInterface from '@/components/ChatInterface';
 import ProfileWizard from '@/components/ProfileWizard';
 import AssetListItem from '@/components/AssetListItem';
+import PortfolioAllocationPage from '@/components/PortfolioAllocationPage';
 import { RISK_QUESTIONS } from '@/lib/constants';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Loader2 } from 'lucide-react';
 import { PortfolioResponse, PortfolioData, UserProfile } from '@/lib/types';
+import AllocationSidebar from '@/components/AllocationSidebar';
 
 import dynamic from 'next/dynamic';
 const PortfolioDonutChart = dynamic(() => import('@/components/PortfolioDonutChart'), {
@@ -24,20 +26,9 @@ const PortfolioDonutChart = dynamic(() => import('@/components/PortfolioDonutCha
 
 type PortfolioState = PortfolioResponse | null;
 
-type Step = 'welcome' | 'questionnaire' | 'ageInput' | 'results';
-const STEPS: Step[] = ['welcome', 'questionnaire', 'ageInput', 'results'];
+type Step = 'welcome' | 'stepOne' | 'questionnaire' | 'results';
+const STEPS: Step[] = ['welcome', 'stepOne', 'questionnaire', 'results'];
 const TOTAL_STEPS = STEPS.length - 1;
-
-// Predefined colors for the sample data to avoid hydration mismatch
-const sampleChartColors = [
-  '#10B981', // Emerald 500
-  '#F59E0B', // Amber 500
-  '#3B82F6', // Blue 500
-  '#EC4899', // Pink 500
-  '#8B5CF6', // Violet 500
-  '#EF4444', // Red 500
-  '#6366F1', // Indigo 500
-];
 
 export default function AdvisorPage() {
   const [portfolioData, setPortfolioData] = useState<PortfolioState>(null);
@@ -45,50 +36,30 @@ export default function AdvisorPage() {
   const [currentStep, setCurrentStep] = useState<Step>('welcome');
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [userAge, setUserAge] = useState<number | ''>('');
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
+  const [birthday, setBirthday] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Dynamically build asset & chart data from backend portfolio when available
-  const dynamicAssetData = portfolioData?.portfolioData?.holdings?.map((h, index) => ({
-    name: h.name || h.ticker,
-    ticker: h.ticker,
-    weight: (h.percentage ?? 0) / 100, // convert percent to fraction 0-1
-    icon: 'V',
-    color: sampleChartColors[index % sampleChartColors.length],
-  }));
-
-  const assetDataToDisplay = dynamicAssetData && dynamicAssetData.length > 0 ? dynamicAssetData : [];
-
-  const donutData = assetDataToDisplay.map(a => ({
-    name: a.ticker,
-    value: a.weight * 100,
-    color: a.color!,
-  }));
 
   const handleStart = () => {
-    setCurrentStep('questionnaire');
+    setCurrentStep('stepOne');
   };
 
-  const handleWizardComplete = (answers: Record<string, string>) => {
+  const handleWizardComplete = async (answers: Record<string, string>) => {
     console.log('Wizard completed with answers:', answers);
     setUserAnswers(answers);
-    setCurrentStep('ageInput');
-  };
-
-  const handleAgeSubmit = async () => {
-    if (userAge === '' || userAge <= 0) {
-      setError('Please enter a valid age.');
-      return;
-    }
+    
+    // Since we already have age from the birthday calculation, proceed to generate portfolio
     setIsLoading(true);
     setError(null);
+    
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
-
       const payload = {
-        answers: userAnswers,
-        age: Number(userAge)
+        answers: { ...userAnswers, ...answers, age: userAge.toString() },
       };
-      console.log("Sending payload to backend:", JSON.stringify(payload, null, 2));
+      console.log("Sending final payload to backend:", JSON.stringify(payload, null, 2));
 
       const response = await axios.post(`/api/generate-portfolio-from-wizard`, 
         payload, 
@@ -102,16 +73,49 @@ export default function AdvisorPage() {
 
       console.log('API Response:', response.data);
       if (response.data) {
-        setTimeout(() => {
-          setPortfolioData(response.data);
-          setCurrentStep('results');
-          setError(null); 
-          setIsLoading(false); 
-        }, 5000); 
+        setPortfolioData(response.data);
+        setCurrentStep('results');
+        setError(null); 
       } else {
         setError("Failed to generate portfolio. Received unexpected data from the server.");
-        setIsLoading(false); 
       }
+      setIsLoading(false);
+      
+    } catch (error) {
+      console.error('Error generating portfolio:', error);
+      setError('Failed to generate portfolio. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleAgeSubmit = async () => {
+    if (!firstName.trim() || !lastName.trim() || !birthday) {
+      setError('Please enter your first name, last name, and birthday.');
+      return;
+    }
+
+    // Calculate age from birthday
+    const today = new Date();
+    const birthDate = new Date(birthday);
+    let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    // Adjust age if birthday hasn't occurred this year yet
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      calculatedAge--;
+    }
+
+    // Set the calculated age
+    setUserAge(calculatedAge);
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      setUserAnswers({ ...userAnswers, firstName, lastName, birthday, age: calculatedAge.toString() });
+      
+      // Proceed to questionnaire
+      setCurrentStep('questionnaire');
+      setIsLoading(false);
     } catch (err: any) {
       console.error('API Error during age submit:', err);
       
@@ -132,197 +136,191 @@ export default function AdvisorPage() {
     }
   };
 
-  const handleReset = () => {
-    setPortfolioData(null);
-    setError(null);
-    setUserAnswers({});
-    setUserAge('');
-    setCurrentStep('welcome');
-    setIsLoading(false);
-  };
-
   const handlePortfolioUpdate = (updatedPortfolioResponse: PortfolioResponse) => {
     console.log("AdvisorPage: Received updated portfolio data", updatedPortfolioResponse);
     setPortfolioData(updatedPortfolioResponse); 
-  };
-
-  const calculateProgress = () => {
-    const currentStepIndex = STEPS.indexOf(currentStep);
-    if (currentStepIndex <= 0) return 0;
-    if (currentStep === 'results') return 100;
-    return Math.round(((currentStepIndex) / TOTAL_STEPS) * 100);
   };
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 'welcome':
         return (
-          <Card className="w-full max-w-lg mx-auto glass-card">
-            <CardHeader>
-              <CardTitle className="text-center text-3xl font-bold text-white drop-shadow-lg mb-2">Welcome to Paige</CardTitle>
-              <p className="text-center text-lg text-white/90 drop-shadow-sm font-medium">
-                Your AI-powered wealth advisor. Let's get started by understanding your risk tolerance.
+          <div className="relative w-full h-screen flex items-center justify-center">
+            {/* Glassmorphism Form Card */}
+            <div className="relative w-[488px] h-[374px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10 flex flex-col gap-20">
+              {/* Logo Container */}
+              <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
+                {/* Paige Logo Text */}
+                <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
+  Paige<span className="align-super text-[10px] ml-1">&reg;</span>
+</span>
+              </div>
+
+              {/* Content Container */}
+              <div className="flex flex-col gap-7">
+                {/* Title Container */}
+                <div className="flex flex-col gap-3">
+                  <h1 className="text-[36px] leading-[44px] font-medium text-white font-inter-display">
+                    Welcome to Paige
+                  </h1>
+                  <p className="text-[16px] leading-[24px] font-normal text-white/80 font-inter">
+                    Your AI-powered wealth advisor. Let's get started by understanding your risk tolerance.
+                  </p>
+                </div>
+
+                {/* Button */}
+                <button 
+                  onClick={handleStart}
+                  className="w-full h-14 bg-white rounded-full flex items-center justify-between px-8 py-4 group hover:bg-white/95 transition-all duration-200"
+                >
+                  <span className="text-[16px] leading-[24px] font-medium text-[#00121F] font-inter mx-auto">
+                    Start Questionnaire
+                  </span>
+                  <span className="flex items-center justify-center w-7 h-7 ml-2">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="14" cy="14" r="14" fill="#00121F"/>
+    <path d="M10 14H18" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M15 11L18 14L15 17" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Copyright Footer */}
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+              <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
+                2025 Paige. All Rights Reserved.
               </p>
-            </CardHeader>
-            <CardContent className="flex justify-center">
-              <Button onClick={handleStart} className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-8 py-3 text-lg rounded-xl shadow-lg backdrop-blur-sm border border-white/50">Start Questionnaire</Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
-      case 'questionnaire':
+      case 'stepOne':
+      return (
+        <div className="relative w-full h-screen flex items-center justify-center">
+          {/* Glassmorphism Card */}
+          <div className="relative w-[1440px] h-[800px] bg-transparent rounded-[40px] flex items-center justify-center overflow-hidden">
+            {/* Glassmorphism Form */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[488px] h-[594px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] flex flex-col items-start p-[40px] gap-[80px] z-10" style={{ boxSizing: 'border-box' }}>
+              {/* Top bar with logo */}
+              <div className="flex flex-row items-center gap-[80px] w-[408px] h-[26px] p-0" style={{ boxSizing: 'border-box' }}>
+                <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
+                  <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
+                    Paige<span className="align-super text-[10px] ml-1">&reg;</span>
+                  </span>
+                </div>
+                {/* (Optional: Progress bar, if needed) */}
+              </div>
+              {/* Form Content */}
+              <div className="flex flex-col gap-[28px] w-[408px] items-start">
+                {/* Title Container */}
+                <div className="flex flex-col gap-3">
+                  <h1 className="text-[36px] leading-[44px] font-medium text-white font-inter-display w-[408px]">
+                    Tell us about yourself
+                  </h1>
+                  <p className="text-[16px] leading-[24px] font-normal text-white/80 font-inter w-[408px]">
+                    Please enter your details so we can tailor the portfolio allocation.
+                  </p>
+                </div>
+                {/* Inputs */}
+                <div className="flex flex-col gap-[12px] w-[408px]">
+                  {/* First Name */}
+                  <div className="flex flex-col gap-[8px] w-[408px]">
+                    <label htmlFor="firstName" className="text-[12px] leading-[18px] text-white/60 font-inter w-[360px]">First Name</label>
+                    <div className="flex flex-row items-center bg-white/30 rounded-[99px] w-[408px] h-[56px] min-h-[56px] max-h-[56px] px-6 py-4 gap-[16px]">
+                      <input
+                        id="firstName"
+                        type="text"
+                        className="bg-transparent text-white w-full border-none outline-none text-[16px] leading-[24px] font-inter placeholder:text-white/60"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="Enter your first name"
+                      />
+                    </div>
+                  </div>
+                  {/* Last Name */}
+                  <div className="flex flex-col gap-[8px] w-[408px]">
+                    <label htmlFor="lastName" className="text-[12px] leading-[18px] text-white/60 font-inter w-[360px]">Last Name</label>
+                    <div className="flex flex-row items-center bg-white/30 rounded-[99px] w-[408px] h-[56px] min-h-[56px] max-h-[56px] px-6 py-4 gap-[16px]">
+                      <input
+                        id="lastName"
+                        type="text"
+                        className="bg-transparent text-white w-full border-none outline-none text-[16px] leading-[24px] font-inter placeholder:text-white/60"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Enter your last name"
+                      />
+                    </div>
+                  </div>
+                  {/* Birthday */}
+                  <div className="flex flex-col gap-[8px] w-[408px]">
+                    <label htmlFor="birthday" className="text-[12px] leading-[18px] text-white/60 font-inter w-[360px]">Birthday</label>
+                    <div className="flex flex-row items-center bg-white/30 rounded-[99px] w-[408px] h-[56px] min-h-[56px] max-h-[56px] px-6 py-4 gap-[16px]">
+                      <input
+                        id="birthday"
+                        type="date"
+                        className="bg-transparent text-white w-full border-none outline-none text-[16px] leading-[24px] font-inter placeholder:text-white/60"
+                        value={birthday}
+                        onChange={(e) => setBirthday(e.target.value)}
+                        placeholder="Enter your birthday"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {error && (
+                  <p className="text-red-500 text-sm text-center">{error}</p>
+                )}
+                {/* Button Group */}
+                <div className="flex flex-row gap-6 mt-6">
+                  <button
+                    onClick={handleAgeSubmit}
+                    className="flex flex-row items-center justify-between w-[408px] h-[56px] min-h-[56px] max-h-[56px] px-[32px] pr-[14px] bg-white rounded-full font-inter font-medium text-[16px] leading-[24px] text-[#00121F] hover:bg-white/90 transition-all duration-200 shadow-md gap-[12px]"
+                  >
+                    <span className="mx-auto text-[16px] leading-[24px] font-medium text-[#00121F] font-inter">
+                      Continue
+                    </span>
+                    <span className="flex items-center justify-center w-7 h-7 ml-2">
+                      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="14" cy="14" r="14" fill="#00121F"/>
+  <path d="M10 14H18" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  <path d="M15 11L18 14L15 17" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+</svg>
+                    </span>
+                  </button>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+          {/* Copyright Footer for Step One */}
+          <div className="w-full flex justify-center mt-8 absolute left-0" style={{ bottom: 24 }}>
+            <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
+              2025 Paige. All Rights Reserved.
+            </p>
+          </div>
+        </div>
+      );
+    case 'questionnaire':
         return (
           <ProfileWizard
             questions={RISK_QUESTIONS}
             onComplete={handleWizardComplete}
           />
         );
-      case 'ageInput':
-        return (
-          <Card className="w-full max-w-md mx-auto glass-card">
-            <CardHeader>
-              <CardTitle className="text-center text-2xl font-bold text-white drop-shadow-lg mb-2">Tell us about yourself</CardTitle>
-              <p className="text-center text-lg text-white/90 drop-shadow-sm font-medium">Please enter your age so we can tailor the portfolio allocation.</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center min-h-[150px]"> 
-                  <Loader2 className="h-12 w-12 animate-spin text-sky-600 mb-4" />
-                  <p className="text-lg font-semibold text-gray-700">Paige is designing your portfolio...</p>
-                  <p className="text-sm text-muted-foreground">This may take a moment.</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-center text-gray-600">
-                    Please enter your age so we can tailor the portfolio allocation.
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="ageInput" className="text-white font-medium">Your Age</Label>
-                    <Input
-                      id="ageInput"
-                      type="number"
-                      className="bg-white/70 text-slate-900 w-full"
-                      value={userAge}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setUserAge(value === '' ? '' : parseInt(value, 10));
-                      }}
-                      placeholder="Enter your age"
-                      min="18" 
-                      max="100" 
-                    />
-                  </div>
-                  {error && (
-                    <p className="text-red-500 text-sm text-center">{error}</p>
-                  )}
-                </>
-              )}
-            </CardContent>
-            {!isLoading && (
-              <CardFooter className="flex justify-center">
-                <div className="flex space-x-4 justify-between w-full">
-                  <Button 
-                    variant="outline" 
-                    className="bg-white/20 text-white hover:bg-white/30 border-white/40 font-semibold px-6 py-2 rounded-xl"
-                    onClick={() => setCurrentStep('questionnaire')}
-                  >
-                    Back
-                  </Button>
-                  <Button 
-                    onClick={handleAgeSubmit}
-                    disabled={!userAge}
-                    className="bg-white/90 text-blue-700 hover:bg-white font-semibold px-6 py-2 rounded-xl shadow-lg backdrop-blur-sm border border-white/50"
-                  >
-                    <span>Next</span>
-                    <svg className="ml-2 w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                  </Button>
-                </div>
-              </CardFooter>
-            )}
-          </Card>
-        );
       case 'results':
-        return (
-          <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6"> 
-            <div className="max-w-7xl mx-auto">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h1 className="text-4xl font-bold text-gray-900 mb-2">Your Portfolio Recommendation</h1>
-                  <p className="text-lg text-gray-600">Designed specifically for your risk profile and goals</p>
-                </div>
-                <Button variant="outline" className="bg-white shadow-sm hover:shadow-md" onClick={() => { setCurrentStep('welcome'); setPortfolioData(null); }}>
-                  Start Over
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Portfolio Details */}
-                <div className="lg:col-span-2 space-y-6">
-                  <Card className="bg-white shadow-lg border-0 rounded-2xl p-6">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-2xl font-bold text-gray-900 mb-2">Portfolio Details</CardTitle>
-                      <p className="text-gray-600 leading-relaxed">Based on your risk profile, I've designed this diversified portfolio to help you achieve your financial goals while managing risk appropriately.</p>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4 py-3 border-b border-gray-100 font-semibold text-gray-700">
-                          <div>Asset</div>
-                          <div className="text-right">Allocation</div>
-                        </div>
-                        {assetDataToDisplay.map((asset, index) => (
-                          <AssetListItem key={index} asset={asset} />
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Right Column: Chart Visualization */}
-                <div className="lg:col-span-1">
-                  <Card className="bg-gradient-to-br from-slate-900 to-slate-800 shadow-xl border-0 rounded-2xl overflow-hidden">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-2xl font-bold text-white mb-2">Portfolio Allocation</CardTitle>
-                      <p className="text-slate-300 text-sm">Visual breakdown of your investment distribution</p>
-                    </CardHeader>
-                    <CardContent className="h-[400px] flex items-center justify-center">
-                      <PortfolioDonutChart data={donutData} />
-                    </CardContent>
-                    <CardFooter className="pt-0">
-                      <div className="w-full">
-                        <h4 className="text-white font-semibold mb-3">Legend</h4>
-                        <div className="grid gap-2">
-                          {donutData.map((entry, idx) => (
-                            <div key={idx} className="flex items-center justify-between bg-white/10 rounded-lg p-2 backdrop-blur-sm">
-                              <div className="flex items-center">
-                                <span className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: entry.color }}></span>
-                                <span className="text-white text-sm font-medium">{entry.name}</span>
-                              </div>
-                              <span className="text-white font-semibold">{entry.value.toFixed(1)}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </div>
-              </div>
-
-              {/* Chat Interface */}
-              <div className="mt-8">
-                <Card className="bg-white shadow-lg border-0 rounded-2xl overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
-                    <CardTitle className="text-xl font-bold text-gray-900">Chat with Paige</CardTitle>
-                    <p className="text-gray-600 text-sm">Ask questions or request adjustments to your portfolio</p>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <ChatInterface 
-                      portfolioData={portfolioData?.portfolioData} 
-                      userPreferences={portfolioData?.userPreferences}
-                      onPortfolioUpdate={handlePortfolioUpdate} 
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+        return portfolioData?.portfolioData ? (
+          <PortfolioAllocationPage 
+            portfolioData={portfolioData.portfolioData}
+            userPreferences={{
+              ...portfolioData.userPreferences,
+              firstName: firstName || portfolioData.userPreferences?.firstName
+            }}
+            onApprove={() => console.log('Portfolio approved!')}
+            onPortfolioUpdate={handlePortfolioUpdate}
+          />
+        ) : (
+          <div className="w-full min-h-screen flex items-center justify-center bg-white">
+            <p className="text-lg text-gray-600">Loading portfolio data...</p>
           </div>
         );
       default:
@@ -332,20 +330,11 @@ export default function AdvisorPage() {
 
   // Different layout for results vs. wizard screens
   const pageContainerClass = currentStep === 'results'
-    ? "w-full min-h-screen py-8 px-4 flex flex-col items-center overflow-auto" // Scrollable, no bg for results
+    ? "w-full h-screen overflow-hidden" // Fixed height for results page
     : "w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center"; // Fixed height, cloud bg, reduced padding for wizard
     
   return (
     <div className={pageContainerClass}>
-      {currentStep !== 'welcome' && (
-        <h1 className="text-3xl font-bold text-white drop-shadow-sm mb-2 text-center">
-          Paige, your AI-powered Wealth Advisor
-        </h1>
-      )}
-      {currentStep !== 'welcome' && currentStep !== 'results' && (
-        <Progress value={calculateProgress()} className="w-full max-w-md mx-auto mb-4" />
-      )}
-
       {/* The Card component rendered by renderStepContent will use mx-auto for centering */}
       {renderStepContent()}
     </div>
