@@ -141,6 +141,18 @@ export default function AdvisorPage() {
     setPortfolioData(updatedPortfolioResponse); 
   };
 
+  const handleStartOver = () => {
+    setPortfolioData(null);
+    setError(null);
+    setUserAnswers({});
+    setUserAge('');
+    setFirstName('');
+    setLastName('');
+    setBirthday('');
+    setCurrentStep('welcome');
+    setIsLoading(false);
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 'welcome':
@@ -317,6 +329,7 @@ export default function AdvisorPage() {
             }}
             onApprove={() => console.log('Portfolio approved!')}
             onPortfolioUpdate={handlePortfolioUpdate}
+            onStartOver={handleStartOver}
           />
         ) : (
           <div className="w-full min-h-screen flex items-center justify-center bg-white">

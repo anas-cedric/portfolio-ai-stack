@@ -20,6 +20,7 @@ interface PortfolioAllocationPageProps {
   onApprove?: () => void;
   userPreferences?: any;
   onPortfolioUpdate?: (updated: PortfolioResponse) => void;
+  onStartOver?: () => void;
 }
 
 const InfoIcon = () => (
@@ -30,7 +31,7 @@ const InfoIcon = () => (
   </svg>
 );
 
-const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate }) => {
+const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver }) => {
   const [showScrollTop, setShowScrollTop] = React.useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -74,7 +75,10 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                     <span className="text-sm font-medium">PAIGE®</span>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 text-[#00121F]/60 hover:text-[#00121F]/80 transition-colors">
+                <button 
+                  onClick={onStartOver}
+                  className="flex items-center gap-2 text-[#00121F]/60 hover:text-[#00121F]/80 transition-colors"
+                >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3 8H13M3 8L6 5M3 8L6 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>

@@ -48,13 +48,11 @@ export default function ChatInterface({
     if (portfolioData && messages.length === 0) {
         if (portfolioData) {
           const initialAssistantMsg = 
-            `Hi there! Based on your profile, I've designed this portfolio for you:
+            `I've carefully crafted a portfolio allocation that aligns with your risk profile and investment objectives. This recommendation reflects a balanced approach designed to help you achieve your long-term financial goals while managing risk appropriately.
 
-${formatPortfolioToString(portfolioData)}
+Your portfolio emphasizes diversification across multiple asset classes, with allocations strategically distributed to provide both growth potential and stability. The specific weightings have been calibrated based on your age, risk tolerance, and investment timeline.
 
-Analysis: ${portfolioData.analysis || 'No analysis provided.'}
-
-Feel free to ask any questions or request adjustments. If you're satisfied, you can approve the portfolio below.` ;
+I'm here to discuss any aspects of this allocation with you. Whether you'd like to understand the reasoning behind certain holdings, explore adjustments to better match your preferences, or discuss how this portfolio might perform under different market conditions, please don't hesitate to ask. My goal is to ensure you feel completely confident in your investment strategy.`;
           setMessages([
             {
               content: initialAssistantMsg,
@@ -81,22 +79,6 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
     }
   }, [messages]);
 
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(1)}%`; 
-  };
-
-  const formatPortfolioToString = (data: any): string => {
-    if (!data || !data.allocations) return 'No portfolio data available.';
-    
-    let output = "Here's your recommended portfolio allocation:\n\n";
-    output += Object.entries(data.allocations)
-      .map(([assetClass, percentage]) => 
-        `- ${assetClass.toUpperCase()}: ${formatPercentage(percentage as number)}`
-      )
-      .join('\n');
-    
-    return output;
-  };
 
   const handleSubmit = async (e: FormEvent, suggestionText?: string) => {
     e.preventDefault();
@@ -121,7 +103,21 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
         conversation_history: messages.map(m => ({ role: m.role, content: m.content })),
         metadata: {
           conversation_state: 'complete',
-          updated_portfolio: portfolioData
+          updated_portfolio: portfolioData,
+          system_instructions: `You are a professional wealth manager having a conversation with your client. 
+          
+Key guidelines:
+- Respond in a warm, professional, and conversational tone
+- Write in complete paragraphs, not bullet points or lists
+- Focus on percentage allocations, not dollar amounts
+- Explain investment concepts in accessible terms
+- Show empathy and understanding of the client's financial goals
+- Be confident in your recommendations while remaining open to adjustments
+- Discuss risk, diversification, and long-term strategy
+- Avoid technical jargon unless explaining it clearly
+- Always maintain a human, personalized approach
+
+Remember: You're their trusted financial advisor, not a chatbot.`
         }
       }, {
         headers: {
@@ -201,7 +197,21 @@ Feel free to ask any questions or request adjustments. If you're satisfied, you 
 
       const payload = {
         current_portfolio: currentPortfolioNested, // Send the nested structure
-        chat_history: backendChatHistory, 
+        chat_history: backendChatHistory,
+        system_instructions: `You are a professional wealth manager having a conversation with your client. 
+          
+Key guidelines:
+- Respond in a warm, professional, and conversational tone
+- Write in complete paragraphs, not bullet points or lists
+- Focus on percentage allocations, not dollar amounts
+- Explain investment concepts in accessible terms
+- Show empathy and understanding of the client's financial goals
+- Be confident in your recommendations while remaining open to adjustments
+- Discuss risk, diversification, and long-term strategy
+- Avoid technical jargon unless explaining it clearly
+- Always maintain a human, personalized approach
+
+Remember: You're their trusted financial advisor, not a chatbot.`
       };
 
       // Log the payload being sent for debugging
