@@ -24,7 +24,7 @@ interface PortfolioAllocationPageProps {
 }
 
 const InfoIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-30">
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-60 hover:opacity-100 cursor-help transition-opacity">
     <circle cx="7" cy="7" r="6.25" stroke="currentColor" strokeWidth="1.5" fill="none"/>
     <circle cx="7" cy="4.5" r="0.875" fill="currentColor"/>
     <line x1="7" y1="6.5" x2="7" y2="10.5" stroke="currentColor" strokeWidth="1.5"/>
@@ -45,6 +45,22 @@ const ETF_EXPENSE_RATIOS: Record<string, number> = {
   'BNDX': 0.05,  // Vanguard Total International Bond ETF
   'VTIP': 0.04,  // Vanguard Short-Term Inflation-Protected Securities ETF
   'CASH': 0.00   // Cash has no expense ratio
+};
+
+// ETF descriptions for tooltips
+const ETF_DESCRIPTIONS: Record<string, string> = {
+  'VTI': 'Tracks the entire U.S. stock market, providing broad exposure to large-, mid-, and small-cap stocks.',
+  'VUG': 'Focuses on U.S. large-cap growth stocks with strong earnings growth potential.',
+  'VBR': 'Invests in U.S. small-cap value stocks that are trading below their intrinsic value.',
+  'VEA': 'Provides exposure to developed international markets in Europe, Asia, and the Pacific.',
+  'VSS': 'Tracks small-cap stocks from developed markets outside the United States.',
+  'VWO': 'Invests in emerging market stocks from countries like China, India, Taiwan, and Brazil.',
+  'VNQ': 'Tracks U.S. real estate investment trusts (REITs) across various property sectors.',
+  'VNQI': 'Provides exposure to international real estate markets outside the United States.',
+  'BND': 'Tracks the broad U.S. bond market, including government, corporate, and mortgage-backed bonds.',
+  'BNDX': 'Invests in international bonds from developed markets, excluding the United States.',
+  'VTIP': 'Focuses on short-term Treasury Inflation-Protected Securities (TIPS) to hedge against inflation.',
+  'CASH': 'Cash and cash equivalents provide liquidity and stability with minimal risk.'
 };
 
 const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver }) => {
@@ -123,11 +139,13 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                       <div className="flex items-center justify-end gap-1">
                         Expense Ratio
                         <Tooltip>
-                          <TooltipTrigger>
-                            <InfoIcon />
+                          <TooltipTrigger asChild>
+                            <button type="button" className="inline-flex items-center">
+                              <InfoIcon />
+                            </button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Annual fee charged by the fund as a percentage of your investment</p>
+                            <p>The annual fee charged by the fund as a percentage of your investment. Lower expense ratios mean more of your money stays invested.</p>
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -143,10 +161,24 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                           <div className="w-10 h-10 rounded-full bg-[#B91C1C] flex items-center justify-center text-white font-bold text-sm">
                             V
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm text-[#00121F] font-medium">
-                              {holding.name || holding.ticker}
-                            </span>
+                          <div className="flex flex-col flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-[#00121F] font-medium">
+                                {holding.name || holding.ticker}
+                              </span>
+                              {ETF_DESCRIPTIONS[holding.ticker] && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button type="button" className="inline-flex items-center">
+                                      <InfoIcon />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-[300px]">
+                                    <p>{ETF_DESCRIPTIONS[holding.ticker]}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
                             <span className="text-xs text-[#00121F]/50 uppercase">
                               {holding.ticker}
                             </span>
