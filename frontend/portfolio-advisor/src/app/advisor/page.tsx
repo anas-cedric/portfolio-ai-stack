@@ -43,6 +43,9 @@ export default function AdvisorPage() {
 
 
   const handleStart = () => {
+    // Clear any contaminated state when starting fresh
+    setUserAnswers({});
+    setError(null);
     setCurrentStep('stepOne');
   };
 
@@ -169,6 +172,7 @@ export default function AdvisorPage() {
   };
 
   const handleStartOver = () => {
+    // Complete state reset
     setPortfolioData(null);
     setError(null);
     setUserAnswers({});
