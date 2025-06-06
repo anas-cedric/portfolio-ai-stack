@@ -124,8 +124,7 @@ export default function AdvisorPage() {
     setIsLoading(true);
     setError(null);
     try {
-      setUserAnswers({ ...userAnswers, firstName, lastName, birthday, age: calculatedAge.toString() });
-      
+      // Personal data is stored in separate state variables, not in userAnswers
       // Proceed to questionnaire
       setCurrentStep('questionnaire');
       setIsLoading(false);
