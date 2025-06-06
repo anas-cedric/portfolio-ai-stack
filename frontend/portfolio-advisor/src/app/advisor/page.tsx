@@ -47,7 +47,13 @@ export default function AdvisorPage() {
   };
 
   const handleWizardComplete = async (answers: Record<string, string>) => {
-    console.log('Wizard completed with answers:', answers);
+    console.log('=== DEBUGGING WIZARD DATA FLOW ===');
+    console.log('Raw answers received from ProfileWizard:', answers);
+    console.log('Current state - userAge:', userAge, 'type:', typeof userAge);
+    console.log('Current state - firstName:', firstName);
+    console.log('Current state - lastName:', lastName);
+    console.log('Current state - birthday:', birthday);
+    
     setUserAnswers(answers);
     
     // Since we already have age from the birthday calculation, proceed to generate portfolio
@@ -57,22 +63,31 @@ export default function AdvisorPage() {
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
       
-      // Separate risk questionnaire answers from personal data
+      // Convert ProfileWizard answers (which should only be risk questions) to expected format
       const riskAnswers: Record<string, string> = {};
       for (const key in answers) {
-        if (!isNaN(parseInt(key))) { // Only include numeric question IDs
+        console.log(`Processing answer key: "${key}", value: "${answers[key]}"`);
+        // ProfileWizard uses question IDs like "1", "2", "3"... "13"
+        if (/^\d+$/.test(key)) { // Only include numeric question IDs
           riskAnswers[`q${key}`] = answers[key];
+        } else {
+          console.warn(`Unexpected non-numeric key in answers: "${key}" with value "${answers[key]}"`);
         }
       }
       
+      console.log('Processed risk answers:', riskAnswers);
+      
+      // Ensure age is a number or undefined
+      const ageToSend = (typeof userAge === 'number' && userAge > 0) ? userAge : undefined;
+      
       const payload = {
         answers: riskAnswers,
-        age: userAge || undefined,  // Send age separately
+        age: ageToSend,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
         birthday: birthday || undefined
       };
-      console.log("Sending final payload to backend:", JSON.stringify(payload, null, 2));
+      console.log("Final payload being sent to backend:", JSON.stringify(payload, null, 2));
 
       const response = await axios.post(`/api/generate-portfolio-from-wizard`, 
         payload, 

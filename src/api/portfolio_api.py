@@ -1344,7 +1344,12 @@ async def generate_portfolio_from_wizard(
     for details not gathered by the wizard (age, investment, horizon etc.),
     but allows overriding age.
     """
-    logger.info(f"Received wizard request: Age={request.age}, Answers provided={bool(request.answers)}")
+    logger.info(f"=== BACKEND DEBUGGING ===")
+    logger.info(f"Received wizard request: Age={request.age} (type: {type(request.age)})")
+    logger.info(f"firstName={request.firstName}, lastName={request.lastName}, birthday={request.birthday}")
+    logger.info(f"Raw answers received: {request.answers}")
+    logger.info(f"Answers keys: {list(request.answers.keys())}")
+    logger.info(f"Answers provided: {bool(request.answers)}")
 
     # Convert answers dict {'q1': 'a', ...} to string "1a, 2c, ..."
     answers_str = ", ".join([f"{q.replace('q', '')}{a}" for q, a in request.answers.items()])
