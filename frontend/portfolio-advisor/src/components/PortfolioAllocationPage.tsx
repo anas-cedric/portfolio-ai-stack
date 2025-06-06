@@ -67,6 +67,8 @@ const ETF_DESCRIPTIONS: Record<string, string> = {
 const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver }) => {
   const [showScrollTop, setShowScrollTop] = React.useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  
+  const vanguardTickers = ['VTI', 'VUG', 'VBR', 'VEA', 'VSS', 'VWO', 'VNQ', 'VNQI', 'BND', 'BNDX', 'VTIP'];
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -164,7 +166,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                       <TableCell className="py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm overflow-hidden">
-                            {holding.ticker.startsWith('V') && holding.ticker !== 'VTIP' ? (
+                            {vanguardTickers.includes(holding.ticker) ? (
                               <Image 
                                 src="/images/vanguard-logo.jpeg" 
                                 alt="Vanguard" 

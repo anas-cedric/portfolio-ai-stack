@@ -17,12 +17,14 @@ interface AssetListItemProps {
 }
 
 const AssetListItem: React.FC<AssetListItemProps> = ({ asset }) => {
+  const vanguardTickers = ['VTI', 'VUG', 'VBR', 'VEA', 'VSS', 'VWO', 'VNQ', 'VNQI', 'BND', 'BNDX', 'VTIP'];
+  const isVanguardETF = vanguardTickers.includes(asset.ticker);
   return (
     <div className="py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors duration-200 rounded-lg px-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm overflow-hidden">
-            {asset.ticker.startsWith('V') && asset.ticker !== 'VTIP' ? (
+            {isVanguardETF ? (
               <Image 
                 src="/images/vanguard-logo.jpeg" 
                 alt="Vanguard" 
