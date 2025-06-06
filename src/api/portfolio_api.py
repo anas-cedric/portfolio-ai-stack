@@ -1222,8 +1222,28 @@ async def generate_portfolio_from_wizard(
          logger.error(f"Could not map derived risk level '{derived_risk_level}' to a glide path key.")
          raise HTTPException(status_code=400, detail=f"Invalid derived risk level: {derived_risk_level}")
 
-    # Use provided age or a default (e.g., 35) if not given
-    user_age = request.age if request.age is not None and request.age > 0 else 35 # Default age if not provided
+    # Use provided age or extract from answers as fallback, or default to 35
+    user_age = request.age
+    logger.info(f"STEP 1: request.age = {request.age}")
+    
+    # Fallback: extract age from contaminated answers if not provided properly
+    if user_age is None:
+        logger.info(f"STEP 2: request.age is None, checking answers for age...")
+        age_from_answers = request.answers.get('age')
+        logger.info(f"STEP 3: Found age in answers: {age_from_answers} (type: {type(age_from_answers)})")
+        
+        if age_from_answers:
+            try:
+                user_age = int(str(age_from_answers))
+                logger.info(f"FALLBACK SUCCESS: Extracted age {user_age} from contaminated answers")
+            except (ValueError, TypeError) as e:
+                logger.error(f"FALLBACK FAILED: Could not convert age '{age_from_answers}' to int: {e}")
+    
+    # Final fallback to default
+    if user_age is None or user_age <= 0:
+        user_age = 35
+        logger.info(f"FINAL FALLBACK: Using default age 35")
+    
     logger.info(f"DEBUG: Raw request.age value: {request.age}, Type: {type(request.age)}")
     if not (18 <= user_age <= 100):
          logger.warning(f"Provided age {user_age} is outside the typical range (18-100). Using default 35.")
