@@ -49,9 +49,13 @@ export default function AdvisorPage() {
 
   const handleWizardComplete = async (answers: Record<string, string>) => {
     console.log('DEBUG: handleWizardComplete called');
-    console.log('DEBUG: Current userAge at start of handleWizardComplete:', userAge, "Type:", typeof userAge);
-    console.log('Wizard completed with answers:', answers);
-    setUserAnswers(answers);
+    console.log('DEBUG: Raw answers received from ProfileWizard:', answers);
+    console.log('DEBUG: Answer keys:', Object.keys(answers));
+    console.log('DEBUG: Current userAge:', userAge, "Type:", typeof userAge);
+    console.log('DEBUG: Current personal data - firstName:', firstName, 'lastName:', lastName, 'birthday:', birthday);
+    
+    // DO NOT set userAnswers with contaminated data
+    // setUserAnswers(answers);
     
     // Since we already have age from the birthday calculation, proceed to generate portfolio
     setIsLoading(true);
@@ -62,20 +66,27 @@ export default function AdvisorPage() {
       
       // Separate risk questionnaire answers from personal data
       const riskAnswers: Record<string, string> = {};
+      const personalDataFound: Record<string, string> = {};
+      
       for (const key in answers) {
-        if (!isNaN(parseInt(key))) { // Only include numeric question IDs
+        if (!isNaN(parseInt(key))) { // Only include numeric question IDs (1, 2, 3, ...)
           riskAnswers[`q${key}`] = answers[key];
+        } else {
+          // Track any non-numeric keys (personal data contamination)
+          personalDataFound[key] = answers[key];
         }
       }
       
-      console.log("DEBUG: userAge value before payload creation:", userAge, "Type:", typeof userAge);
-      console.log("DEBUG: calculatedAge value before payload creation:", calculatedAge, "Type:", typeof calculatedAge);
-      const ageValue = (typeof calculatedAge === 'number' && calculatedAge > 0) ? calculatedAge : undefined;
-      console.log("DEBUG: Computed age value for payload:", ageValue, "Type:", typeof ageValue);
+      console.log('DEBUG: Risk answers extracted:', riskAnswers);
+      console.log('DEBUG: Personal data found in answers (should be empty):', personalDataFound);
+      
+      // Use the calculated age from birthday, not from contaminated answers
+      const ageValue = (typeof userAge === 'number' && userAge > 0) ? userAge : undefined;
+      console.log("DEBUG: Using userAge for payload:", ageValue, "Type:", typeof ageValue);
       
       const payload = {
         answers: riskAnswers,
-        age: ageValue,  // Send age separately
+        age: ageValue,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
         birthday: birthday || undefined

@@ -1203,7 +1203,10 @@ async def generate_portfolio_from_wizard(
     logger.info(f"Answers keys: {list(request.answers.keys())}")
 
     # Convert answers dict {'q1': 'a', ...} to string "1a, 2c, ..."
-    answers_str = ", ".join([f"{q.replace('q', '')}{a}" for q, a in request.answers.items()])
+    # Only process keys that start with 'q' and are valid question IDs
+    valid_answers = {q: a for q, a in request.answers.items() if q.startswith('q') and q[1:].isdigit()}
+    answers_str = ", ".join([f"{q.replace('q', '')}{a}" for q, a in valid_answers.items()])
+    logger.info(f"Valid question keys found: {list(valid_answers.keys())}")
     logger.info(f"Formatted answers for risk calculation: {answers_str}")
 
     derived_risk_level = calculate_risk_level(answers_str)
