@@ -1219,6 +1219,7 @@ async def generate_portfolio_from_wizard(
         logger.info(f"Derived risk level from wizard: {derived_risk_level}")
 
         # 3. Set User Details (Use provided age if available)
+        logger.info(f"DEBUG: Raw request.age value: {repr(request.age)}, Type: {type(request.age)}")
         user_age = request.age if request.age is not None and request.age > 0 else 35 # Use provided age or default
         logger.info(f"Using age: {user_age} (Provided: {request.age})")
         # default_initial_investment = 50000.0 # Keep other defaults

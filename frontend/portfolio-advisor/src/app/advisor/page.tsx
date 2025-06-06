@@ -39,6 +39,7 @@ export default function AdvisorPage() {
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [birthday, setBirthday] = useState<string>('');
+  const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
 
@@ -47,6 +48,8 @@ export default function AdvisorPage() {
   };
 
   const handleWizardComplete = async (answers: Record<string, string>) => {
+    console.log('DEBUG: handleWizardComplete called');
+    console.log('DEBUG: Current userAge at start of handleWizardComplete:', userAge, "Type:", typeof userAge);
     console.log('Wizard completed with answers:', answers);
     setUserAnswers(answers);
     
@@ -65,14 +68,20 @@ export default function AdvisorPage() {
         }
       }
       
+      console.log("DEBUG: userAge value before payload creation:", userAge, "Type:", typeof userAge);
+      console.log("DEBUG: calculatedAge value before payload creation:", calculatedAge, "Type:", typeof calculatedAge);
+      const ageValue = (typeof calculatedAge === 'number' && calculatedAge > 0) ? calculatedAge : undefined;
+      console.log("DEBUG: Computed age value for payload:", ageValue, "Type:", typeof ageValue);
+      
       const payload = {
         answers: riskAnswers,
-        age: userAge || undefined,  // Send age separately
+        age: ageValue,  // Send age separately
         firstName: firstName || undefined,
         lastName: lastName || undefined,
         birthday: birthday || undefined
       };
-      console.log("Sending final payload to backend:", JSON.stringify(payload, null, 2));
+      console.log("DEBUG: Final payload object:", payload);
+      console.log("DEBUG: JSON stringified payload:", JSON.stringify(payload, null, 2));
 
       const response = await axios.post(`/api/generate-portfolio-from-wizard`, 
         payload, 
@@ -110,16 +119,18 @@ export default function AdvisorPage() {
     // Calculate age from birthday
     const today = new Date();
     const birthDate = new Date(birthday);
-    let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+    let ageValue = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
     
     // Adjust age if birthday hasn't occurred this year yet
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      calculatedAge--;
+      ageValue--;
     }
 
     // Set the calculated age
-    setUserAge(calculatedAge);
+    console.log("DEBUG: Setting calculatedAge to:", ageValue, "Type:", typeof ageValue);
+    setUserAge(ageValue);
+    setCalculatedAge(ageValue);
 
     setIsLoading(true);
     setError(null);
@@ -161,6 +172,7 @@ export default function AdvisorPage() {
     setFirstName('');
     setLastName('');
     setBirthday('');
+    setCalculatedAge(null);
     setCurrentStep('welcome');
     setIsLoading(false);
   };
