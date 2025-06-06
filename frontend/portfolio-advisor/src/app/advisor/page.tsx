@@ -56,8 +56,21 @@ export default function AdvisorPage() {
     
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
+      
+      // Separate risk questionnaire answers from personal data
+      const riskAnswers: Record<string, string> = {};
+      for (const key in answers) {
+        if (!isNaN(parseInt(key))) { // Only include numeric question IDs
+          riskAnswers[`q${key}`] = answers[key];
+        }
+      }
+      
       const payload = {
-        answers: { ...userAnswers, ...answers, age: userAge.toString() },
+        answers: riskAnswers,
+        age: userAge || undefined,  // Send age separately
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        birthday: birthday || undefined
       };
       console.log("Sending final payload to backend:", JSON.stringify(payload, null, 2));
 

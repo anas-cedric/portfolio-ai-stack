@@ -15,6 +15,9 @@ from pydantic import BaseModel, Field, ValidationError
 import logging
 import json
 import re
+from datetime import datetime
+import uuid
+from pathlib import Path
 from dotenv import load_dotenv
 from src.utils.openai_client import openai_client, OpenAIClient  # import class for extra model
 from src.prompts.financial_prompts import FinancialPrompts # Adjusted import
@@ -44,6 +47,41 @@ TICKER_NAMES = {
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# User records storage path
+USER_RECORDS_PATH = Path("data/user_records.json")
+USER_RECORDS_PATH.parent.mkdir(exist_ok=True)
+
+def save_user_record(user_data: dict) -> str:
+    """Save user record to JSON file. Returns user ID."""
+    user_id = str(uuid.uuid4())
+    record = {
+        "user_id": user_id,
+        "timestamp": datetime.now().isoformat(),
+        **user_data
+    }
+    
+    # Load existing records
+    records = []
+    if USER_RECORDS_PATH.exists():
+        try:
+            with open(USER_RECORDS_PATH, 'r') as f:
+                records = json.load(f)
+        except Exception as e:
+            logger.error(f"Error loading user records: {e}")
+    
+    # Append new record
+    records.append(record)
+    
+    # Save updated records
+    try:
+        with open(USER_RECORDS_PATH, 'w') as f:
+            json.dump(records, f, indent=2)
+        logger.info(f"Saved user record for {user_data.get('firstName', 'Unknown')} {user_data.get('lastName', 'Unknown')}")
+    except Exception as e:
+        logger.error(f"Error saving user record: {e}")
+    
+    return user_id
 
 # --- Risk Tolerance Questionnaire Data ---
 RISK_QUESTIONNAIRE = """
@@ -159,6 +197,63 @@ QUESTIONNAIRE_TO_GLIDE_PATH_MAP = {
     "Below-Avg": "Below-Avg",
     "Low": "Low"
 }
+
+def calculate_risk_score_and_level(answers_str: str) -> tuple[int, str | None]:
+    """Calculates both the risk score and tolerance level. Returns (score, level)."""
+    total_score = 0
+    parsed_answers = {}
+    
+    try:
+        answer_pairs = answers_str.lower().replace(" ", "").split(',')
+        for pair in answer_pairs:
+            if not pair:
+                continue
+            split_index = -1
+            for i, char in enumerate(pair):
+                if char.isalpha():
+                    split_index = i
+                    break
+            
+            if split_index == -1 or split_index == 0:
+                logger.warning(f"Could not parse answer pair: '{pair}'")
+                continue
+                
+            q_num_str = pair[:split_index]
+            ans_letter = pair[split_index:]
+            
+            if len(ans_letter) > 1:
+                logger.warning(f"Multiple letters in answer for question {q_num_str}: '{ans_letter}'. Using first letter.")
+                ans_letter = ans_letter[0]
+            
+            q_num = int(q_num_str)
+            
+            if q_num not in RISK_SCORING_RULES:
+                logger.warning(f"Ignoring answer for invalid question number: {q_num}")
+                continue
+            
+            rules = RISK_SCORING_RULES[q_num]
+            if ans_letter not in rules:
+                logger.warning(f"Ignoring invalid answer '{ans_letter}' for question {q_num}")
+                continue
+            
+            score = rules[ans_letter]
+            total_score += score
+            parsed_answers[q_num] = ans_letter
+        
+        logger.info(f"Calculated risk score: {total_score} from answers: {parsed_answers}")
+        
+        # Map to risk level
+        for (low, high), level in RISK_LEVEL_MAPPING.items():
+            if low <= total_score <= high:
+                logger.info(f"Mapped score {total_score} to risk level: {level}")
+                return total_score, level
+        
+        logger.warning(f"Risk score {total_score} does not fall into any defined range.")
+        return total_score, None
+        
+    except Exception as e:
+        logger.error(f"Error calculating risk level: {e}")
+        return 0, None
 
 def calculate_risk_level(answers_str: str) -> str | None:
     """Calculates the risk tolerance level based on questionnaire answers."""
@@ -422,6 +517,9 @@ class ChatResponse(BaseModel):
 class WizardRequest(BaseModel):
     answers: Dict[str, str] = Field(..., description="Dictionary of question IDs to chosen letter answers, e.g., {'q1': 'a', 'q2': 'c'}")
     age: Optional[int] = Field(None, description="Optional age of the user.")
+    firstName: Optional[str] = Field(None, description="User's first name")
+    lastName: Optional[str] = Field(None, description="User's last name")
+    birthday: Optional[str] = Field(None, description="User's birthday in YYYY-MM-DD format")
 
 # --- New Models for Portfolio Update --- 
 class BackendUserProfile(BaseModel):
@@ -1250,6 +1348,7 @@ async def generate_portfolio_from_wizard(
 
     # Convert answers dict {'q1': 'a', ...} to string "1a, 2c, ..."
     answers_str = ", ".join([f"{q.replace('q', '')}{a}" for q, a in request.answers.items()])
+    logger.info(f"Formatted answers for risk calculation: {answers_str}")
 
     derived_risk_level = calculate_risk_level(answers_str)
     if not derived_risk_level:
@@ -1262,13 +1361,13 @@ async def generate_portfolio_from_wizard(
          logger.error(f"Could not map derived risk level '{derived_risk_level}' to a glide path key.")
          raise HTTPException(status_code=400, detail=f"Invalid derived risk level: {derived_risk_level}")
 
-    # Use provided age or a default (e.g., 30) if not given
-    user_age = request.age if request.age is not None else 30 # Default age if not provided
+    # Use provided age or a default (e.g., 35) if not given
+    user_age = request.age if request.age is not None else 35 # Default age if not provided
     if not (18 <= user_age <= 100):
-         logger.warning(f"Provided age {user_age} is outside the typical range (18-100). Using default 30.")
-         user_age = 30 # Reset to default if out of range
+         logger.warning(f"Provided age {user_age} is outside the typical range (18-100). Using default 35.")
+         user_age = 35 # Reset to default if out of range
 
-    logger.info(f"Using Age: {user_age}, Derived Risk Level: {derived_risk_level}, Glide Path Key: {glide_path_risk_key}")
+    logger.info(f"Using Age: {user_age} (Provided: {request.age}), Derived Risk Level: {derived_risk_level}, Glide Path Key: {glide_path_risk_key}")
 
     # Get allocations based on age and derived risk level
     allocations_dict = get_glide_path_allocation(user_age, glide_path_risk_key)
@@ -1307,6 +1406,21 @@ async def generate_portfolio_from_wizard(
         "holdings_list": holdings_list # Optional: if frontend needs this structure
     }
 
+    # Save user record if personal data provided
+    if request.firstName or request.lastName or request.birthday:
+        risk_score, _ = calculate_risk_score_and_level(answers_str)
+        user_record_data = {
+            "firstName": request.firstName,
+            "lastName": request.lastName,
+            "birthday": request.birthday,
+            "age": user_age,
+            "risk_level": derived_risk_level,
+            "risk_score": risk_score,
+            "portfolio_allocation": allocations_dict
+        }
+        user_id = save_user_record(user_record_data)
+        response_data["user_id"] = user_id
+    
     logger.info("Successfully generated portfolio from wizard answers.")
     return response_data
 
