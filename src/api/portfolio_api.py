@@ -1186,155 +1186,6 @@ def recalculate_holdings(allocations: Dict[str, float], total_value: float) -> L
 # --- End Helper Function --- 
 
 # --- New Endpoint for Wizard Submission --- 
-@app.post("/api/generate-portfolio-from-wizard") # Define response model later if needed
-async def generate_portfolio_from_wizard(
-    request: WizardRequest,
-    api_key: str = Depends(get_api_key)
-):
-    """
-    Generates a portfolio directly from wizard answers, using default values
-    for details not gathered by the wizard (age, investment, horizon etc.),
-    but allows overriding age.
-    """
-    logger.info(f"Processing generate_portfolio_from_wizard request.")
-    logger.debug(f"Wizard request answers: {request.answers}")
-
-    try:
-        # 1. Format answers for calculate_risk_level
-        # Expects format like "1a, 2c, 3b,..."
-        # Assumes frontend sends keys like 'q1', 'q2' and values as letter strings 'a', 'b', 'c'...
-        formatted_answers = ", ".join([
-            f"{q_id.replace('q', '')}{ans}"  # Directly use the received letter 'ans'
-            for q_id, ans in sorted(request.answers.items())
-        ])
-
-        logger.info(f"Formatted answers for risk calculation: {formatted_answers}")
-
-        # 2. Calculate Risk Level
-        derived_risk_level = calculate_risk_level(formatted_answers)
-        if not derived_risk_level:
-            logger.error(f"Could not calculate risk level from wizard answers: {formatted_answers}")
-            raise HTTPException(status_code=400, detail="Could not determine risk level from the provided answers. Please ensure all questions were answered correctly.")
-
-        logger.info(f"Derived risk level from wizard: {derived_risk_level}")
-
-        # 3. Set User Details (Use provided age if available)
-        logger.info(f"DEBUG: Raw request.age value: {repr(request.age)}, Type: {type(request.age)}")
-        user_age = request.age if request.age is not None and request.age > 0 else 35 # Use provided age or default
-        logger.info(f"Using age: {user_age} (Provided: {request.age})")
-        # default_initial_investment = 50000.0 # Keep other defaults
-        default_initial_investment = 50000.0
-        default_time_horizon = "long-term"
-        logger.warning("Using default values for investment, horizon, income, goals for wizard-based generation.")
-
-        user_preferences = {
-            "age": user_age, # Use the determined age
-            "income": "mid-range",
-            "riskTolerance": derived_risk_level, # Use the calculated one
-            "investmentGoals": ["growth", "retirement"],
-            "timeHorizon": default_time_horizon,
-            "initialInvestment": default_initial_investment,
-            "monthlyContribution": 500.0,
-            "sectorPreferences": [],
-            "avoidSectors": []
-        }
-
-        # 4. Get Base Allocation from Glide Path
-        allocation_percentages = get_glide_path_allocation(user_age, derived_risk_level)
-        if not allocation_percentages:
-            logger.error(f"Could not find glide path allocation for age {user_age} and risk {derived_risk_level}")
-            raise HTTPException(status_code=500, detail="Internal error: Could not determine base portfolio allocation.")
-
-        logger.info(f"Retrieved glide path allocation: {allocation_percentages}")
-
-        # 5. Format Portfolio Data (Correctly calculating percentages)
-        EQUITY_TICKERS = {"VTI", "VUG", "VBR", "VEA", "VSS", "VWO"}
-        IGNORE_KEYS = {"Equity %", "Real Assets %", "Cash %", "Bonds %"}
-
-        holdings = []
-        calculated_allocations = {}
-        total_value = default_initial_investment # Use initial investment as total value
-        equity_total_pct = allocation_percentages.get('Equity %', 0.0)
-        cash_pct = allocation_percentages.get('Cash %', 0.0)
-
-        # Calculate the sum of raw equity percentages for normalization
-        raw_equity_sum = sum(
-            allocation_percentages.get(ticker, 0.0) 
-            for ticker in EQUITY_TICKERS 
-            if ticker in allocation_percentages
-        )
-        if raw_equity_sum <= 0: # Avoid division by zero
-            logger.warning(f"Sum of raw equity percentages is {raw_equity_sum}. Equity allocation will be zero.")
-            raw_equity_sum = 1.0 # Prevent error, result will be 0 anyway as equity_total_pct * 0 / 1 = 0
-
-        for ticker, raw_percentage in allocation_percentages.items():
-            if ticker in IGNORE_KEYS or raw_percentage <= 0:
-                continue # Skip non-ticker keys and zero-allocation tickers
-
-            final_pct = 0.0
-            if ticker in EQUITY_TICKERS:
-                # Normalize the raw equity percentage, then scale by total equity allocation
-                normalized_equity_pct = raw_percentage / raw_equity_sum
-                final_pct = equity_total_pct * normalized_equity_pct
-            else:
-                # Bond and Real Asset tickers are direct percentages of total
-                final_pct = raw_percentage
-
-            if final_pct > 0:
-                holding_value = round(total_value * final_pct, 2)
-                final_pct_rounded = round(final_pct * 100, 2) # Store as percentage value
-                holdings.append({
-                    "ticker": ticker,
-                    "name": TICKER_NAMES.get(ticker, ticker), # Get descriptive name
-                    "value": holding_value,
-                    "percentage": final_pct_rounded
-                })
-                calculated_allocations[ticker] = final_pct_rounded
-
-        # Add Cash allocation if needed
-        if cash_pct > 0:
-            calculated_allocations['Cash'] = round(cash_pct * 100, 2)
-            # Note: Cash is not typically added to 'holdings' unless represented by a ticker
-
-        # TODO: Validate that sum of calculated_allocations is close to 100%
-
-        # Placeholder for other fields usually generated by LLM
-        placeholder_projections = {"years": [0, 5, 10, 20], "values": [total_value] * 4} # Very basic placeholder
-        placeholder_recommendations = [
-            {"title": "Review Allocation", "description": "This portfolio is based on standard glide paths. Further customization is recommended."}
-        ]
-        placeholder_analysis = f"Generated portfolio based on a '{derived_risk_level}' risk tolerance and standard glide path allocations for age {user_age}."
-        
-        portfolio_data = {
-            "totalValue": total_value,
-            "holdings": holdings,
-            "allocations": calculated_allocations, # Use the calculated final percentages
-            "projections": placeholder_projections, # Placeholder
-            "recommendations": placeholder_recommendations, # Placeholder
-            "analysis": placeholder_analysis, # Basic analysis
-             # Add glidePath and rationale if generated/available
-            "glidePath": allocation_percentages, # Pass the raw allocation as glidePath for now
-            "rationale": placeholder_analysis # Reuse analysis as rationale for now
-        }
-
-        # 6. Structure final response as expected by frontend
-        # Matches the structure set in AdvisorPage.tsx state
-        final_response_data = {
-            "portfolioData": portfolio_data, 
-            "userPreferences": user_preferences
-        }
-        
-        logger.info("Successfully generated portfolio structure from wizard.")
-        return final_response_data
-
-    except HTTPException as he:
-        logger.error(f"HTTP exception during wizard portfolio generation: {he.detail}")
-        raise he # Re-raise FastAPI exception
-    except Exception as e:
-        logger.error(f"Unexpected error generating portfolio from wizard: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while generating your portfolio.")
-
-# --- New Endpoint for Wizard Submission --- 
 @app.post("/api/generate-portfolio-from-wizard", tags=["Portfolio Generation"])
 async def generate_portfolio_from_wizard(
     request: WizardRequest,
@@ -1345,7 +1196,11 @@ async def generate_portfolio_from_wizard(
     for details not gathered by the wizard (age, investment, horizon etc.),
     but allows overriding age.
     """
-    logger.info(f"Received wizard request: Age={request.age}, Answers provided={bool(request.answers)}")
+    logger.info(f"=== PROCESSING WIZARD REQUEST ===")
+    logger.info(f"Age={request.age} (type: {type(request.age)})")
+    logger.info(f"firstName={request.firstName}, lastName={request.lastName}, birthday={request.birthday}")
+    logger.info(f"Raw answers received: {request.answers}")
+    logger.info(f"Answers keys: {list(request.answers.keys())}")
 
     # Convert answers dict {'q1': 'a', ...} to string "1a, 2c, ..."
     answers_str = ", ".join([f"{q.replace('q', '')}{a}" for q, a in request.answers.items()])
@@ -1356,6 +1211,8 @@ async def generate_portfolio_from_wizard(
         logger.error(f"Could not derive risk level from answers: {answers_str}")
         raise HTTPException(status_code=400, detail="Could not determine risk tolerance from provided answers.")
 
+    logger.info(f"Derived risk level from wizard: {derived_risk_level}")
+
     # Map questionnaire risk level to glide path key
     glide_path_risk_key = QUESTIONNAIRE_TO_GLIDE_PATH_MAP.get(derived_risk_level)
     if not glide_path_risk_key:
@@ -1363,48 +1220,105 @@ async def generate_portfolio_from_wizard(
          raise HTTPException(status_code=400, detail=f"Invalid derived risk level: {derived_risk_level}")
 
     # Use provided age or a default (e.g., 35) if not given
-    user_age = request.age if request.age is not None else 35 # Default age if not provided
+    user_age = request.age if request.age is not None and request.age > 0 else 35 # Default age if not provided
+    logger.info(f"DEBUG: Raw request.age value: {request.age}, Type: {type(request.age)}")
     if not (18 <= user_age <= 100):
          logger.warning(f"Provided age {user_age} is outside the typical range (18-100). Using default 35.")
          user_age = 35 # Reset to default if out of range
 
-    logger.info(f"Using Age: {user_age} (Provided: {request.age}), Derived Risk Level: {derived_risk_level}, Glide Path Key: {glide_path_risk_key}")
+    logger.info(f"Using age: {user_age} (Provided: {request.age})")
 
-    # Get allocations based on age and derived risk level
-    allocations_dict = get_glide_path_allocation(user_age, glide_path_risk_key)
+    # Get allocations based on age and derived risk level  
+    allocation_percentages = get_glide_path_allocation(user_age, derived_risk_level)
+    if not allocation_percentages:
+        logger.error(f"Could not find glide path allocation for age {user_age} and risk {derived_risk_level}")
+        raise HTTPException(status_code=500, detail="Internal error: Could not determine base portfolio allocation.")
 
-    if not allocations_dict:
-        logger.error(f"No glide path allocation found for Age: {user_age}, Risk Key: {glide_path_risk_key}")
-        raise HTTPException(status_code=404, detail="Could not find suitable portfolio allocation for the given age and risk profile.")
+    logger.info(f"Found allocation for age {user_age}, risk '{derived_risk_level}': Range (33-37)")
+    logger.info(f"Retrieved glide path allocation: {allocation_percentages}")
 
-    # --- Generate Detailed Rationale using OpenAI ---
-    # Use the helper function instead of the simple f-string
-    detailed_rationale = await get_detailed_rationale_from_openai(
-        age=user_age,
-        risk_tolerance=derived_risk_level, # Use the derived level for explanation
-        allocations=allocations_dict
+    # Format Portfolio Data (matching frontend expectations)
+    EQUITY_TICKERS = {"VTI", "VUG", "VBR", "VEA", "VSS", "VWO"}
+    IGNORE_KEYS = {"Equity %", "Real Assets %", "Cash %", "Bonds %"}
+
+    default_initial_investment = 50000.0
+    holdings = []
+    calculated_allocations = {}
+    total_value = default_initial_investment
+    equity_total_pct = allocation_percentages.get('Equity %', 0.0)
+    cash_pct = allocation_percentages.get('Cash %', 0.0)
+
+    # Calculate the sum of raw equity percentages for normalization
+    raw_equity_sum = sum(
+        allocation_percentages.get(ticker, 0.0) 
+        for ticker in EQUITY_TICKERS 
+        if ticker in allocation_percentages
     )
-    # ------------------------------------------------
+    if raw_equity_sum <= 0:
+        logger.warning(f"Sum of raw equity percentages is {raw_equity_sum}. Equity allocation will be zero.")
+        raw_equity_sum = 1.0
 
-    # Format holdings list (optional, if needed by frontend directly)
-    holdings_list = [
-        {
-            "ticker": ticker,
-            "name": TICKER_NAMES.get(ticker, "Unknown Ticker"), # Get descriptive name
-            "percentage": percentage
-        }
-        for ticker, percentage in allocations_dict.items()
+    for ticker, raw_percentage in allocation_percentages.items():
+        if ticker in IGNORE_KEYS or raw_percentage <= 0:
+            continue
+
+        final_pct = 0.0
+        if ticker in EQUITY_TICKERS:
+            normalized_equity_pct = raw_percentage / raw_equity_sum
+            final_pct = equity_total_pct * normalized_equity_pct
+        else:
+            final_pct = raw_percentage
+
+        if final_pct > 0:
+            holding_value = round(total_value * final_pct, 2)
+            final_pct_rounded = round(final_pct * 100, 2)
+            holdings.append({
+                "ticker": ticker,
+                "name": TICKER_NAMES.get(ticker, ticker),
+                "value": holding_value,
+                "percentage": final_pct_rounded
+            })
+            calculated_allocations[ticker] = final_pct_rounded
+
+    # Add Cash allocation if needed
+    if cash_pct > 0:
+        calculated_allocations['Cash'] = round(cash_pct * 100, 2)
+
+    # User preferences matching frontend expectations
+    user_preferences = {
+        "age": user_age,
+        "income": "mid-range",
+        "riskTolerance": derived_risk_level,
+        "investmentGoals": ["growth", "retirement"],
+        "timeHorizon": "long-term",
+        "initialInvestment": default_initial_investment,
+        "monthlyContribution": 500.0,
+        "sectorPreferences": [],
+        "avoidSectors": []
+    }
+
+    # Portfolio data matching frontend expectations
+    placeholder_projections = {"years": [0, 5, 10, 20], "values": [total_value] * 4}
+    placeholder_recommendations = [
+        {"title": "Review Allocation", "description": "This portfolio is based on standard glide paths. Further customization is recommended."}
     ]
+    placeholder_analysis = f"Generated portfolio based on a '{derived_risk_level}' risk tolerance and standard glide path allocations for age {user_age}."
+    
+    portfolio_data = {
+        "totalValue": total_value,
+        "holdings": holdings,
+        "allocations": calculated_allocations,
+        "projections": placeholder_projections,
+        "recommendations": placeholder_recommendations,
+        "analysis": placeholder_analysis,
+        "glidePath": allocation_percentages,
+        "rationale": placeholder_analysis
+    }
 
-    # Structure the response for the frontend
-    response_data = {
-        "allocations": allocations_dict,
-        "rationale": detailed_rationale, # Use the detailed rationale from OpenAI
-        "user_profile_summary": { # Include derived info for context
-            "age": user_age,
-            "derived_risk_level": derived_risk_level
-        },
-        "holdings_list": holdings_list # Optional: if frontend needs this structure
+    # Structure final response as expected by frontend
+    final_response_data = {
+        "portfolioData": portfolio_data, 
+        "userPreferences": user_preferences
     }
 
     # Save user record if personal data provided
@@ -1417,13 +1331,13 @@ async def generate_portfolio_from_wizard(
             "age": user_age,
             "risk_level": derived_risk_level,
             "risk_score": risk_score,
-            "portfolio_allocation": allocations_dict
+            "portfolio_allocation": allocation_percentages
         }
         user_id = save_user_record(user_record_data)
-        response_data["user_id"] = user_id
+        final_response_data["user_id"] = user_id
     
-    logger.info("Successfully generated portfolio from wizard answers.")
-    return response_data
+    logger.info("Successfully generated portfolio structure from wizard.")
+    return final_response_data
 
 
 if __name__ == "__main__":
