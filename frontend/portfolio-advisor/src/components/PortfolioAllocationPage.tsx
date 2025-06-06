@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { ChevronUp } from 'lucide-react';
 import { PortfolioData, PortfolioResponse } from '@/lib/types';
 import AllocationSidebar from './AllocationSidebar';
@@ -162,8 +163,20 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                     <TableRow key={idx} className="border-b border-[#00121F]/5">
                       <TableCell className="py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#B91C1C] flex items-center justify-center text-white font-bold text-sm">
-                            V
+                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm overflow-hidden">
+                            {holding.ticker.startsWith('V') && holding.ticker !== 'VTIP' ? (
+                              <Image 
+                                src="/images/vanguard-logo.jpeg" 
+                                alt="Vanguard" 
+                                width={40} 
+                                height={40} 
+                                className="object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-[#B91C1C] flex items-center justify-center text-white font-bold text-sm">
+                                {holding.ticker.charAt(0)}
+                              </div>
+                            )}
                           </div>
                           <div className="flex flex-col flex-1">
                             <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { Info } from 'lucide-react'; // Using lucide-react for icons
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // For the info icon
 
@@ -20,8 +21,20 @@ const AssetListItem: React.FC<AssetListItemProps> = ({ asset }) => {
     <div className="py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors duration-200 rounded-lg px-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-            {asset.ticker.charAt(0)}
+          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm overflow-hidden">
+            {asset.ticker.startsWith('V') && asset.ticker !== 'VTIP' ? (
+              <Image 
+                src="/images/vanguard-logo.jpeg" 
+                alt="Vanguard" 
+                width={40} 
+                height={40} 
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                {asset.ticker.charAt(0)}
+              </div>
+            )}
           </div>
           <div>
             <div className="flex items-center space-x-2">
