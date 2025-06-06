@@ -161,7 +161,9 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {portfolioData.holdings.map((holding, idx) => (
+                  {portfolioData.holdings
+                    .sort((a, b) => b.percentage - a.percentage)
+                    .map((holding, idx) => (
                     <TableRow key={idx} className="border-b border-[#00121F]/5">
                       <TableCell className="py-4">
                         <div className="flex items-center gap-3">

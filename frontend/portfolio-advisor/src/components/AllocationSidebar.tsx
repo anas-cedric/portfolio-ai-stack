@@ -33,12 +33,14 @@ const ETF_SECTORS: Record<string, { sector: string; color: string }> = {
 
 export default function AllocationSidebar({ portfolioData, onApprove }: AllocationSidebarProps) {
   console.log('AllocationSidebar onApprove:', typeof onApprove, !!onApprove);
-  // Build holdings data (individual assets)
-  const holdingsData = portfolioData.holdings.map(holding => ({
-    name: holding.ticker,
-    value: holding.percentage,
-    color: ETF_SECTORS[holding.ticker]?.color || '#6B7280'
-  }));
+  // Build holdings data (individual assets) - sorted by percentage (highest to lowest)
+  const holdingsData = portfolioData.holdings
+    .sort((a, b) => b.percentage - a.percentage)
+    .map(holding => ({
+      name: holding.ticker,
+      value: holding.percentage,
+      color: ETF_SECTORS[holding.ticker]?.color || '#6B7280'
+    }));
 
   // Build sectors data (aggregated by sector)
   const sectorsMap = new Map<string, { value: number; color: string }>();
