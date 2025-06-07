@@ -13,7 +13,7 @@ export default function ThankYouPage() {
           <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
             {/* Paige Logo Text */}
             <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-              Paige<span className="align-super text-[10px] ml-1">&reg;</span>
+              Paige
             </span>
           </div>
 
@@ -50,7 +50,7 @@ export default function ThankYouPage() {
         {/* Copyright Footer */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
           <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
-            2025 Paige. All Rights Reserved.
+            2025 Paige
           </p>
         </div>
       </div>

@@ -204,7 +204,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
         {/* Logo */}
         <div className="flex items-center justify-center w-[77px] h-[26px] border border-white rounded-full">
           <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-            Paige<span className="align-super text-[10px] ml-1">&reg;</span>
+            Paige
           </span>
         </div>
         

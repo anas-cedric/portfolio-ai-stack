@@ -107,7 +107,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-2">
                   <div className="border border-black/20 rounded-full px-3 py-1">
-                    <span className="text-sm font-medium">PAIGE®</span>
+                    <span className="text-sm font-medium">PAIGE</span>
                   </div>
                 </div>
                 <button 

@@ -163,7 +163,7 @@ export default function Home() {
               <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
                 {/* Paige Logo Text */}
                 <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-  Paige<span className="align-super text-[10px] ml-1">&reg;</span>
+  Paige
 </span>
               </div>
 
@@ -201,7 +201,7 @@ export default function Home() {
             {/* Copyright Footer */}
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
               <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
-                2025 Paige. All Rights Reserved.
+                2025 Paige
               </p>
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function Home() {
               <div className="flex flex-row items-center gap-[80px] w-[408px] h-[26px] p-0" style={{ boxSizing: 'border-box' }}>
                 <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
                   <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-                    Paige<span className="align-super text-[10px] ml-1">&reg;</span>
+                    Paige
                   </span>
                 </div>
                 {/* (Optional: Progress bar, if needed) */}
@@ -306,7 +306,7 @@ export default function Home() {
           {/* Copyright Footer for Step One */}
           <div className="w-full flex justify-center mt-8 absolute left-0" style={{ bottom: 24 }}>
             <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
-              2025 Paige. All Rights Reserved.
+              2025 Paige
             </p>
           </div>
         </div>
