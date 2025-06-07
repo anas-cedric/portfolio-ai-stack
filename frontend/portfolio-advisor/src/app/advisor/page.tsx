@@ -26,8 +26,8 @@ const PortfolioDonutChart = dynamic(() => import('@/components/PortfolioDonutCha
 
 type PortfolioState = PortfolioResponse | null;
 
-type Step = 'welcome' | 'stepOne' | 'questionnaire' | 'results';
-const STEPS: Step[] = ['welcome', 'stepOne', 'questionnaire', 'results'];
+type Step = 'welcome' | 'stepOne' | 'questionnaire' | 'loading' | 'results';
+const STEPS: Step[] = ['welcome', 'stepOne', 'questionnaire', 'loading', 'results'];
 const TOTAL_STEPS = STEPS.length - 1;
 
 export default function AdvisorPage() {
@@ -57,17 +57,16 @@ export default function AdvisorPage() {
     // DO NOT set userAnswers with contaminated data
     // setUserAnswers(answers);
     
-    // CRITICAL FIX: Set loading state and wait for React to render before proceeding
-    setIsLoading(true);
+    // BETTER APPROACH: Immediately switch to loading step, then wait before API call
+    setCurrentStep('loading');
     setError(null);
     
     // Track start time for minimum loading duration
     const loadingStartTime = Date.now();
     console.log('DEBUG: Loading started at', loadingStartTime);
     
-    // Force React to render the loading screen before making API call
-    // Increased delay to ensure React has time to render the loading state
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for React to render the loading screen, then make API call
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
@@ -133,7 +132,7 @@ export default function AdvisorPage() {
         
       } else {
         setError("Failed to generate portfolio. Received unexpected data from the server.");
-        setIsLoading(false);
+        setCurrentStep('questionnaire'); // Go back to questionnaire on error
       }
       
     } catch (error) {
@@ -146,7 +145,7 @@ export default function AdvisorPage() {
       const remainingTime = Math.max(0, minErrorLoadingTime - elapsedTime);
       
       setTimeout(() => {
-        setIsLoading(false);
+        setCurrentStep('questionnaire'); // Go back to questionnaire on error
       }, remainingTime);
     }
   };
@@ -378,26 +377,25 @@ export default function AdvisorPage() {
         </div>
       );
     case 'questionnaire':
-        if (isLoading) {
-          return (
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[488px] h-[374px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10">
-              <div className="h-full flex flex-col items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-white mb-8" />
-                <h2 className="text-[28px] leading-[36px] font-medium text-white font-inter-display mb-3 text-center">
-                  Paige is designing your portfolio
-                </h2>
-                <p className="text-[16px] leading-[24px] font-normal text-white/80 font-inter text-center">
-                  This will just take a moment...
-                </p>
-              </div>
-            </div>
-          );
-        }
         return (
           <ProfileWizard
             questions={RISK_QUESTIONS}
             onComplete={handleWizardComplete}
           />
+        );
+      case 'loading':
+        return (
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[488px] h-[374px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10">
+            <div className="h-full flex flex-col items-center justify-center">
+              <Loader2 className="h-12 w-12 animate-spin text-white mb-8" />
+              <h2 className="text-[28px] leading-[36px] font-medium text-white font-inter-display mb-3 text-center">
+                Paige is designing your portfolio
+              </h2>
+              <p className="text-[16px] leading-[24px] font-normal text-white/80 font-inter text-center">
+                This will just take a moment...
+              </p>
+            </div>
+          </div>
         );
       case 'results':
         return portfolioData?.portfolioData ? (
