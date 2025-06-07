@@ -348,6 +348,21 @@ export default function AdvisorPage() {
         </div>
       );
     case 'questionnaire':
+        if (isLoading) {
+          return (
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[488px] h-[374px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10">
+              <div className="h-full flex flex-col items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-white mb-8" />
+                <h2 className="text-[28px] leading-[36px] font-medium text-white font-inter-display mb-3 text-center">
+                  Paige is designing your portfolio
+                </h2>
+                <p className="text-[16px] leading-[24px] font-normal text-white/80 font-inter text-center">
+                  This will just take a moment...
+                </p>
+              </div>
+            </div>
+          );
+        }
         return (
           <ProfileWizard
             questions={RISK_QUESTIONS}
