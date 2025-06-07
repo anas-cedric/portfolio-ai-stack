@@ -44,43 +44,8 @@ TICKER_NAMES = {
     # Add any other tickers present in your CSVs
 }
 
-# Configure logging for the entire application
-import sys
-import os
-
-# Custom handler that routes based on log level
-class SplitStreamHandler(logging.StreamHandler):
-    """Handler that sends errors to stderr and everything else to stdout"""
-    def emit(self, record):
-        if record.levelno >= logging.ERROR:
-            self.stream = sys.stderr
-        else:
-            self.stream = sys.stdout
-        super().emit(record)
-
-# Remove any existing handlers
-root_logger = logging.getLogger()
-root_logger.handlers = []
-
-# Determine if we're in production
-is_production = os.getenv('VERCEL_ENV') == 'production'
-
-# Configure root logger with appropriate handler
-if is_production:
-    # In production, use split handler for proper error routing
-    handler = SplitStreamHandler()
-else:
-    # In development, everything to stdout for easier debugging
-    handler = logging.StreamHandler(sys.stdout)
-
-logging.basicConfig(
-    level=logging.WARNING if is_production else logging.INFO,
-    format='%(name)s - %(levelname)s - %(message)s' if is_production else '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[handler],
-    force=True
-)
-
-# Get logger for this module
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # User records storage path
