@@ -17,7 +17,7 @@ interface Question {
 // Define the 13 risk questions
 const riskQuestions: Question[] = [
   {
-    id: 'q1',
+    id: '1',
     text: 'In general, how would your best friend describe you as a risk taker?',
     options: [
       { value: 'a', label: 'A real gambler' },
@@ -27,7 +27,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q2',
+    id: '2',
     text: 'You are on a TV game show and can choose one of the following; which would you take?',
     options: [
       { value: 'a', label: '$1,000 in cash' },
@@ -37,7 +37,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q3',
+    id: '3',
     text: 'You have just finished saving for a once-in-a-lifetime vacation. Three weeks before you plan to leave, you lose your job. You would:',
     options: [
       { value: 'a', label: 'Cancel the vacation' },
@@ -47,7 +47,7 @@ const riskQuestions: Question[] = [
     ],
   },
    {
-    id: 'q4',
+    id: '4',
     text: 'If you unexpectedly received $20,000 to invest, what would you do?',
     options: [
       { value: 'a', label: 'Deposit it in a bank account, money market account, or insured CD' },
@@ -56,7 +56,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q5',
+    id: '5',
     text: 'In terms of experience, how comfortable are you investing in stocks or stock mutual funds?',
     options: [
       { value: 'a', label: 'Not at all comfortable' },
@@ -65,7 +65,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q6',
+    id: '6',
     text: 'When you think of the word ‘risk,’ which of the following words comes to mind first?',
     options: [
       { value: 'a', label: 'Loss' },
@@ -75,7 +75,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q7',
+    id: '7',
     text: 'Some experts are predicting prices of assets such as gold, jewels, collectibles, and real estate to increase in value; bond prices may fall. Most of your investment assets are now in high-interest government bonds. What would you do?',
     options: [
       { value: 'a', label: 'Hold the bonds' },
@@ -85,7 +85,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q8',
+    id: '8',
     text: 'Given the best and worst case returns of the four investment choices below, which would you prefer?',
     options: [
       { value: 'a', label: '$200 gain best case; $0 gain/loss worst case' },
@@ -95,7 +95,7 @@ const riskQuestions: Question[] = [
     ],
   },
    {
-    id: 'q9',
+    id: '9',
     text: 'In addition to whatever you own, you have been given $1,000. You are now asked to choose between:',
     options: [
       { value: 'a', label: 'A sure gain of $500' },
@@ -103,7 +103,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q10',
+    id: '10',
     text: 'In addition to whatever you own, you have been given $2,000. You are now asked to choose between:',
     options: [
       { value: 'a', label: 'A sure loss of $500' },
@@ -111,7 +111,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q11',
+    id: '11',
     text: 'Suppose a relative left you an inheritance of $100,000, stipulating that you invest ALL the money in ONE of the following choices. Which one would you select?',
     options: [
       { value: 'a', label: 'A savings account or money market mutual fund' },
@@ -121,7 +121,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q12',
+    id: '12',
     text: 'If you had to invest $20,000, which investment choice would you find most appealing?',
     options: [
       { value: 'a', label: '60% low-risk, 30% medium-risk, 10% high-risk' },
@@ -131,7 +131,7 @@ const riskQuestions: Question[] = [
     ],
   },
   {
-    id: 'q13',
+    id: '13',
     text: 'Your friend is raising money to fund an exploratory gold-mining venture with a 20% chance of success and huge upside. How much would you invest?',
     options: [
       { value: 'a', label: 'Nothing' },

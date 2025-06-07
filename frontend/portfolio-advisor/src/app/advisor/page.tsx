@@ -58,7 +58,7 @@ export default function AdvisorPage() {
     // DO NOT set userAnswers with contaminated data
     // setUserAnswers(answers);
     
-    // GUARANTEED APPROACH: Switch to loading and enforce 5-second minimum regardless of API speed
+    // BETTER APPROACH: Immediately switch to loading step, then wait before API call
     setCurrentStep('loading');
     setError(null);
     
@@ -66,107 +66,94 @@ export default function AdvisorPage() {
     const loadingStartTime = Date.now();
     console.log('DEBUG: Loading started at', loadingStartTime);
     
-    // Start API call in background but enforce 5-second minimum display
-    let apiResponse: any = null;
-    let apiError: any = null;
-    
-    // Start API call immediately in background
-    const makeApiCall = async () => {
-      try {
-        const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
-        
-        // Separate risk questionnaire answers from personal data
-        const riskAnswers: Record<string, string> = {};
-        const personalDataFound: Record<string, string> = {};
-        
-        for (const key in answers) {
-          if (key.startsWith('q') || (!isNaN(parseInt(key)) && parseInt(key) >= 1 && parseInt(key) <= 13)) {
-            // Handle both 'q1' format and '1' format
-            const normalizedKey = key.startsWith('q') ? key : `q${key}`;
-            riskAnswers[normalizedKey] = answers[key];
-          } else {
-            // Track any non-numeric keys (personal data contamination)
-            personalDataFound[key] = answers[key];
-          }
-        }
-        
-        console.log('DEBUG: Risk answers extracted:', riskAnswers);
-        console.log('DEBUG: Personal data found in answers (should be empty):', personalDataFound);
-        
-        // Use the calculated age from birthday, not from contaminated answers
-        let ageValue = (typeof userAge === 'number' && userAge > 0) ? userAge : undefined;
-        
-        // Fallback: if age is missing from state but present in contaminated answers, use it
-        if (!ageValue && personalDataFound.age) {
-          try {
-            ageValue = parseInt(personalDataFound.age);
-            console.log("DEBUG: Using fallback age from contaminated answers:", ageValue);
-          } catch (e) {
-            console.log("DEBUG: Could not parse age from contaminated answers:", personalDataFound.age);
-          }
-        }
-        
-        console.log("DEBUG: Using userAge for payload:", ageValue, "Type:", typeof ageValue);
-        console.log("DEBUG: Current state values - userAge:", userAge, "firstName:", firstName, "lastName:", lastName, "birthday:", birthday);
-        
-        const payload = {
-          answers: riskAnswers,
-          age: ageValue,
-          firstName: firstName || undefined,
-          lastName: lastName || undefined,
-          birthday: birthday || undefined
-        };
-        console.log("DEBUG: Final payload object:", payload);
-        console.log("DEBUG: JSON stringified payload:", JSON.stringify(payload, null, 2));
-
-        const response = await axios.post(`/api/generate-portfolio-from-wizard`, 
-          payload, 
-          {
-            headers: {
-              'x-api-key': apiKey,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        console.log('DEBUG: API Response received:', response.data);
-        return response.data;
-      } catch (error) {
-        console.error('DEBUG: API Error:', error);
-        throw error;
-      }
-    };
-
-    // Start API call but don't wait for it
-    makeApiCall()
-      .then(data => {
-        apiResponse = data;
-        console.log('DEBUG: API completed successfully');
-      })
-      .catch(error => {
-        apiError = error;
-        console.log('DEBUG: API failed');
+    // Wait for React to render the loading screen, then make API call
+    // Use requestAnimationFrame to ensure React has completed its render cycle
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 300); // Additional buffer for complex renders
       });
+    });
     
-    // Always wait exactly 5 seconds regardless of API speed
-    timeoutRef.current = setTimeout(() => {
-      console.log('DEBUG: 5-second loading completed, transitioning');
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
       
-      if (apiError) {
-        setError('Failed to generate portfolio. Please try again.');
-        setCurrentStep('questionnaire');
-      } else if (apiResponse) {
-        setPortfolioData(apiResponse);
-        setError(null);
-        setCurrentStep('results');
-      } else {
-        // API still pending after 5 seconds
-        setError('Portfolio generation is taking longer than expected. Please try again.');
-        setCurrentStep('questionnaire');
+      // Separate risk questionnaire answers from personal data
+      const riskAnswers: Record<string, string> = {};
+      const personalDataFound: Record<string, string> = {};
+      
+      for (const key in answers) {
+        if (!isNaN(parseInt(key))) { // Only include numeric question IDs (1, 2, 3, ...)
+          riskAnswers[`q${key}`] = answers[key];
+        } else {
+          // Track any non-numeric keys (personal data contamination)
+          personalDataFound[key] = answers[key];
+        }
       }
       
-      setIsLoading(false);
-    }, 5000);
+      console.log('DEBUG: Risk answers extracted:', riskAnswers);
+      console.log('DEBUG: Personal data found in answers (should be empty):', personalDataFound);
+      
+      // Use the calculated age from birthday, not from contaminated answers
+      const ageValue = (typeof userAge === 'number' && userAge > 0) ? userAge : undefined;
+      console.log("DEBUG: Using userAge for payload:", ageValue, "Type:", typeof ageValue);
+      
+      const payload = {
+        answers: riskAnswers,
+        age: ageValue,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        birthday: birthday || undefined
+      };
+      console.log("DEBUG: Final payload object:", payload);
+      console.log("DEBUG: JSON stringified payload:", JSON.stringify(payload, null, 2));
+
+      const response = await axios.post(`/api/generate-portfolio-from-wizard`, 
+        payload, 
+        {
+          headers: {
+            'x-api-key': apiKey,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      console.log('API Response:', response.data);
+      if (response.data) {
+        setPortfolioData(response.data);
+        setError(null);
+        
+        // Calculate elapsed time since loading started and ensure minimum 5 second total delay
+        const elapsedTime = Date.now() - loadingStartTime;
+        const minLoadingTime = 5000; // 5 seconds
+        
+        // Wait for the remaining time to ensure total loading time is at least 5 seconds
+        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+        console.log('DEBUG: Elapsed time:', elapsedTime, 'ms, remaining time:', remainingTime, 'ms');
+        
+        timeoutRef.current = setTimeout(() => {
+          console.log('DEBUG: Timeout completed, switching to results');
+          setCurrentStep('results');
+          setIsLoading(false);
+        }, remainingTime);
+        
+      } else {
+        setError("Failed to generate portfolio. Received unexpected data from the server.");
+        setCurrentStep('questionnaire'); // Go back to questionnaire on error
+      }
+      
+    } catch (error) {
+      console.error('Error generating portfolio:', error);
+      setError('Failed to generate portfolio. Please try again.');
+      
+      // Even on error, show loading screen for at least 2 seconds from start
+      const elapsedTime = Date.now() - loadingStartTime;
+      const minErrorLoadingTime = 2000; // 2 seconds
+      const remainingTime = Math.max(0, minErrorLoadingTime - elapsedTime);
+      
+      timeoutRef.current = setTimeout(() => {
+        setCurrentStep('questionnaire'); // Go back to questionnaire on error
+      }, remainingTime);
+    }
   };
 
   const handleAgeSubmit = async () => {
