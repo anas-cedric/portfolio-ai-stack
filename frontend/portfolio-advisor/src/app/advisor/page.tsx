@@ -57,9 +57,17 @@ export default function AdvisorPage() {
     // DO NOT set userAnswers with contaminated data
     // setUserAnswers(answers);
     
-    // Since we already have age from the birthday calculation, proceed to generate portfolio
+    // CRITICAL FIX: Set loading state and wait for React to render before proceeding
     setIsLoading(true);
     setError(null);
+    
+    // Track start time for minimum loading duration
+    const loadingStartTime = Date.now();
+    console.log('DEBUG: Loading started at', loadingStartTime);
+    
+    // Force React to render the loading screen before making API call
+    // Increased delay to ensure React has time to render the loading state
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
@@ -107,14 +115,22 @@ export default function AdvisorPage() {
       console.log('API Response:', response.data);
       if (response.data) {
         setPortfolioData(response.data);
+        setError(null);
         
-        // Add a minimum 5 second delay to ensure loading screen is visible
+        // Calculate elapsed time since loading started and ensure minimum 5 second total delay
+        const elapsedTime = Date.now() - loadingStartTime;
+        const minLoadingTime = 5000; // 5 seconds
+        
+        // Wait for the remaining time to ensure total loading time is at least 5 seconds
+        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+        console.log('DEBUG: Elapsed time:', elapsedTime, 'ms, remaining time:', remainingTime, 'ms');
+        
         setTimeout(() => {
+          console.log('DEBUG: Timeout completed, switching to results');
           setCurrentStep('results');
           setIsLoading(false);
-        }, 5000);
+        }, remainingTime);
         
-        setError(null); 
       } else {
         setError("Failed to generate portfolio. Received unexpected data from the server.");
         setIsLoading(false);
@@ -123,10 +139,15 @@ export default function AdvisorPage() {
     } catch (error) {
       console.error('Error generating portfolio:', error);
       setError('Failed to generate portfolio. Please try again.');
-      // Even on error, show loading screen for at least 2 seconds
+      
+      // Even on error, show loading screen for at least 2 seconds from start
+      const elapsedTime = Date.now() - loadingStartTime;
+      const minErrorLoadingTime = 2000; // 2 seconds
+      const remainingTime = Math.max(0, minErrorLoadingTime - elapsedTime);
+      
       setTimeout(() => {
         setIsLoading(false);
-      }, 2000);
+      }, remainingTime);
     }
   };
 
