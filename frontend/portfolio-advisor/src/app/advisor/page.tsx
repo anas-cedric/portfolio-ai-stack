@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import PortfolioResults from '@/components/PortfolioResults';
@@ -41,6 +41,7 @@ export default function AdvisorPage() {
   const [birthday, setBirthday] = useState<string>('');
   const [calculatedAge, setCalculatedAge] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 
   const handleStart = () => {
@@ -66,7 +67,12 @@ export default function AdvisorPage() {
     console.log('DEBUG: Loading started at', loadingStartTime);
     
     // Wait for React to render the loading screen, then make API call
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Use requestAnimationFrame to ensure React has completed its render cycle
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        setTimeout(resolve, 300); // Additional buffer for complex renders
+      });
+    });
     
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
@@ -124,7 +130,7 @@ export default function AdvisorPage() {
         const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
         console.log('DEBUG: Elapsed time:', elapsedTime, 'ms, remaining time:', remainingTime, 'ms');
         
-        setTimeout(() => {
+        timeoutRef.current = setTimeout(() => {
           console.log('DEBUG: Timeout completed, switching to results');
           setCurrentStep('results');
           setIsLoading(false);
@@ -144,7 +150,7 @@ export default function AdvisorPage() {
       const minErrorLoadingTime = 2000; // 2 seconds
       const remainingTime = Math.max(0, minErrorLoadingTime - elapsedTime);
       
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setCurrentStep('questionnaire'); // Go back to questionnaire on error
       }, remainingTime);
     }
@@ -205,6 +211,12 @@ export default function AdvisorPage() {
   };
 
   const handleStartOver = () => {
+    // Clear any pending timeouts
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    
     setPortfolioData(null);
     setError(null);
     setUserAnswers({});
@@ -216,6 +228,15 @@ export default function AdvisorPage() {
     setCurrentStep('welcome');
     setIsLoading(false);
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const renderStepContent = () => {
     switch (currentStep) {
