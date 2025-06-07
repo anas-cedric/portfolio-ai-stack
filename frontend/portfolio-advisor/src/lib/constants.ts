@@ -1,6 +1,6 @@
 export const RISK_QUESTIONS = [
   {
-    id: 'q1',
+    id: '1',
     text: 'In general, how would your best friend describe you as a risk taker?',
     options: [
       { value: 'a', label: 'A real gambler' },
