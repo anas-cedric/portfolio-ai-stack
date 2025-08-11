@@ -161,9 +161,9 @@ export default function Home() {
             <div className="relative w-[488px] h-[374px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10 flex flex-col gap-20">
               {/* Logo Container */}
               <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
-                {/* Paige Logo Text */}
+                {/* Cedric Logo Text */}
                 <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-  Paige
+  Cedric
 </span>
               </div>
 
@@ -172,7 +172,7 @@ export default function Home() {
                 {/* Title Container */}
                 <div className="flex flex-col gap-3">
                   <h1 className="text-[36px] leading-[44px] font-medium text-white font-inter-display">
-                    Welcome to Paige
+                    Welcome to Cedric
                   </h1>
                   <p className="text-[16px] leading-[24px] font-normal text-white/80 font-inter">
                     Your AI-powered wealth advisor. Let's get started by understanding your risk tolerance.
@@ -201,7 +201,7 @@ export default function Home() {
             {/* Copyright Footer */}
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
               <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
-                2025 Paige
+                2025 Cedric
               </p>
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function Home() {
               <div className="flex flex-row items-center gap-[80px] w-[408px] h-[26px] p-0" style={{ boxSizing: 'border-box' }}>
                 <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
                   <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-                    Paige
+                    Cedric
                   </span>
                 </div>
                 {/* (Optional: Progress bar, if needed) */}
@@ -306,7 +306,7 @@ export default function Home() {
           {/* Copyright Footer for Step One */}
           <div className="w-full flex justify-center mt-8 absolute left-0" style={{ bottom: 24 }}>
             <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
-              2025 Paige
+              2025 Cedric
             </p>
           </div>
         </div>

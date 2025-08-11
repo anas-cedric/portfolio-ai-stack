@@ -1,10 +1,10 @@
-# Paige AI Portfolio Advisor Frontend
+# Cedric AI Portfolio Advisor Frontend
 
 A Next.js-based frontend application for collecting user preferences and generating AI-powered portfolio recommendations.
 
 ## Overview
 
-This application provides a user interface for the Paige AI Portfolio Advisor system, allowing users to:
+This application provides a user interface for the Cedric AI Portfolio Advisor system, allowing users to:
 
 1. Input their financial information and investment preferences
 2. Receive personalized portfolio recommendations

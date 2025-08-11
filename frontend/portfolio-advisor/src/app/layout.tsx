@@ -16,8 +16,8 @@ const interDisplay = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Paige - AI-powered Wealth Advisor",
-  description: "Chat with Paige to build and refine your investment portfolio",
+  title: "Cedric - AI-powered Wealth Advisor",
+  description: "Chat with Cedric to build and refine your investment portfolio",
 };
 
 export default function RootLayout({

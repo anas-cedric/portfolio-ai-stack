@@ -75,7 +75,7 @@ export default function PortfolioResults({
           <AlertDialogHeader>
             <AlertDialogTitle>Demo Complete!</AlertDialogTitle>
             <AlertDialogDescription>
-              You have successfully completed the Paige AI Wealth Advisor demo.
+              You have successfully completed the Cedric AI Wealth Advisor demo.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

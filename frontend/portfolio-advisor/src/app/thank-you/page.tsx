@@ -11,9 +11,9 @@ export default function ThankYouPage() {
         <div className="relative w-[488px] bg-white/12 backdrop-blur-[60px] border border-white/8 rounded-[24px] p-10 flex flex-col gap-8">
           {/* Logo Container */}
           <div className="relative w-[77px] h-[26px] border border-white rounded-full flex items-center justify-center">
-            {/* Paige Logo Text */}
+            {/* Cedric Logo Text */}
             <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-              Paige
+              Cedric
             </span>
           </div>
 
@@ -25,7 +25,7 @@ export default function ThankYouPage() {
                 Thank You
               </h1>
               <p className="text-[16px] leading-[24px] font-normal text-white/80 font-inter">
-                Thank you for trying Paige. We appreciate your time and feedback in exploring our AI-powered wealth advisory platform.
+                Thank you for trying Cedric. We appreciate your time and feedback in exploring our AI-powered wealth advisory platform.
               </p>
             </div>
 
@@ -50,7 +50,7 @@ export default function ThankYouPage() {
         {/* Copyright Footer */}
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
           <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
-            2025 Paige
+            2025 Cedric
           </p>
         </div>
       </div>
