@@ -199,10 +199,16 @@ export default function Home() {
             </div>
 
             {/* Copyright Footer */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3">
               <p className="text-[12px] leading-[18px] font-normal text-white/80 font-inter">
                 2025 Cedric
               </p>
+              {/* Temporary test links for new features */}
+              <div className="flex gap-4 text-[10px] text-white/60">
+                <a href="/onboarding" className="hover:text-white/80 underline">Test Onboarding</a>
+                <a href="/fund" className="hover:text-white/80 underline">Test Funding</a>
+                <a href="/trade" className="hover:text-white/80 underline">Test Trading</a>
+              </div>
             </div>
           </div>
         );
@@ -327,9 +333,16 @@ export default function Home() {
               firstName: firstName || portfolioData.userPreferences?.firstName
             }}
             onApprove={() => {
-              console.log('Portfolio approved!');
-              // Navigate to thank you page
-              window.location.href = '/thank-you';
+              console.log('Portfolio approved! Starting onboarding...');
+              // Save user data for onboarding flow
+              localStorage.setItem('user_info', JSON.stringify({
+                firstName,
+                lastName, 
+                birthday,
+                age: userAge
+              }));
+              // Navigate to onboarding to actually create account
+              window.location.href = '/onboarding';
             }}
             onPortfolioUpdate={handlePortfolioUpdate}
             onStartOver={handleStartOver}
