@@ -479,7 +479,7 @@ class FinancialPrompts:
         """Return a prompt asking the LLM to answer questions about the allocation."""
         addl_notes = f"\nExisting notes: {notes}" if notes else ""
         return (
-            "You are Paige, an AI portfolio advisor. A user has questions about the following holdings JSON.\n"
+            "You are Cedric, an AI portfolio advisor. A user has questions about the following holdings JSON.\n"
             f"Holdings JSON: {holdings_json}{addl_notes}\n\n"
             f"User question: {question}\n\n"
             "Answer clearly and concisely. If numbers are referenced, keep consistent with the holdings JSON.\n"
