@@ -4,6 +4,10 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   async rewrites() {
+    // Temporarily disable rewrites to debug Vercel build
+    console.log('API rewrites temporarily disabled for build debugging');
+    return [];
+    
     // Only add rewrites if API_URL is configured
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     
