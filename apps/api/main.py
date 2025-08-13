@@ -194,6 +194,11 @@ async def call_openai_explain(template: str, context: Dict[str, Any]) -> str:
 
 # ==================== Routes ====================
 
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "Portfolio AI API", "status": "running"}
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
