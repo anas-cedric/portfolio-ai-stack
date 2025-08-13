@@ -32,7 +32,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 PROVIDER = os.getenv("PROVIDER", "alpaca_paper")  # alpaca_paper or atomic
 ORDERS_ENABLED = os.getenv("ORDERS_ENABLED", "true").lower() == "true"
-CLAUDE_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
@@ -154,17 +154,17 @@ def get_glide_path_allocation(bucket: RiskBucket, age: int) -> Dict[str, float]:
     # Default allocation if age not found
     return bucket_data.get((33, 37), {})
 
-async def call_claude_explain(template: str, context: Dict[str, Any]) -> str:
-    """Call Claude API for explanations"""
-    if not CLAUDE_API_KEY:
+async def call_openai_explain(template: str, context: Dict[str, Any]) -> str:
+    """Call OpenAI API for explanations"""
+    if not OPENAI_API_KEY:
         return "AI explanation unavailable"
     
     # Build prompt based on template
     prompts = {
         "proposal": f"Based on risk profile ({context.get('bucket')}) and age ({context.get('age')}), "
-                   f"explain the portfolio allocation: {context.get('allocation')}",
+                   f"explain the portfolio allocation: {context.get('allocation')}. Keep response under 200 words.",
         "rebalance": f"Explain why rebalancing from {context.get('current')} to {context.get('target')} "
-                    f"is recommended due to {context.get('drift')}% drift"
+                    f"is recommended due to {context.get('drift')}% drift. Keep response under 200 words."
     }
     
     prompt = prompts.get(template, "Provide investment rationale")
@@ -172,14 +172,13 @@ async def call_claude_explain(template: str, context: Dict[str, Any]) -> str:
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                "https://api.anthropic.com/v1/messages",
+                "https://api.openai.com/v1/chat/completions",
                 headers={
-                    "x-api-key": CLAUDE_API_KEY,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json"
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json"
                 },
                 json={
-                    "model": "claude-3-sonnet-20240229",
+                    "model": "o3-mini",
                     "max_tokens": 300,
                     "messages": [{"role": "user", "content": prompt}]
                 }
@@ -187,9 +186,9 @@ async def call_claude_explain(template: str, context: Dict[str, Any]) -> str:
             
             if response.status_code == 200:
                 data = response.json()
-                return data.get("content", [{}])[0].get("text", "")
+                return data.get("choices", [{}])[0].get("message", {}).get("content", "")
         except Exception as e:
-            print(f"Claude API error: {e}")
+            print(f"OpenAI API error: {e}")
     
     return "Portfolio allocation optimized for your risk profile and investment horizon."
 
@@ -269,7 +268,7 @@ async def propose_portfolio(
             targets[symbol] = weight * 100  # Convert to percentage
     
     # Generate rationale
-    rationale = await call_claude_explain("proposal", {
+    rationale = await call_openai_explain("proposal", {
         "bucket": request.risk_bucket.value,
         "age": request.age,
         "allocation": allocation
@@ -587,7 +586,7 @@ async def check_rebalance(
     
     if rebalance_trades:
         # Generate explanation
-        rationale = await call_claude_explain("rebalance", {
+        rationale = await call_openai_explain("rebalance", {
             "current": current_weights,
             "target": targets,
             "drift": max_drift
@@ -659,7 +658,7 @@ async def generate_explanation(
     api_key: str = Depends(verify_api_key)
 ):
     """Generate AI explanations"""
-    explanation = await call_claude_explain(request.template, request.context)
+    explanation = await call_openai_explain(request.template, request.context)
     return {"explanation": explanation}
 
 if __name__ == "__main__":
