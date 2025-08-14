@@ -31,6 +31,20 @@ app.add_middleware(
 from src.api.portfolio_api import app as portfolio_generation_app
 app.include_router(portfolio_generation_app.router)
 
+# Health and root endpoints for platform health checks
+START_TIME = datetime.utcnow()
+
+@app.get("/health")
+async def health():
+    """Lightweight health check for Railway."""
+    now = datetime.utcnow()
+    uptime = (now - START_TIME).total_seconds()
+    return {"status": "ok", "uptime_seconds": uptime, "timestamp": now.isoformat() + "Z"}
+
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "Wealth Management API"}
+
 # Environment variables
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
