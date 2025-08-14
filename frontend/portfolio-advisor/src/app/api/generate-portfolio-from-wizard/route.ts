@@ -6,6 +6,14 @@ export async function POST(request: NextRequest) {
     const BACKEND_URL = process.env.NODE_ENV === 'development' 
       ? 'http://localhost:8000' 
       : process.env.BACKEND_URL || '';
+
+    // Prevent accidental recursion in production if BACKEND_URL is not set
+    if (process.env.NODE_ENV !== 'development' && !BACKEND_URL) {
+      return NextResponse.json(
+        { error: 'Server misconfiguration: BACKEND_URL is not set on Vercel' },
+        { status: 500 }
+      );
+    }
     
     // Get request body
     const body = await request.json();
@@ -20,11 +28,15 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body)
     });
 
-    // Get response data
-    const data = await response.json();
-
-    // Return response
-    return NextResponse.json(data);
+    // Get response data and pass through backend status
+    const text = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+    return NextResponse.json(data, { status: response.status });
     
   } catch (error: any) {
     console.error('API Proxy Error:', error);

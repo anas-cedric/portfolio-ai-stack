@@ -27,6 +27,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routes from the portfolio generation module so /api/generate-portfolio-from-wizard is available
+from src.api.portfolio_api import app as portfolio_generation_app
+app.include_router(portfolio_generation_app.router)
+
 # Environment variables
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
