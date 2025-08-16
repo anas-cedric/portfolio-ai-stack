@@ -8,12 +8,16 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from enum import Enum
+import sys
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 from supabase import create_client, Client
+
+# Ensure project root is on sys.path so 'src' package is importable in all environments
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 # Initialize FastAPI app
 app = FastAPI(title="Wealth Management API", version="1.0.0")
