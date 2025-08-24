@@ -7,24 +7,18 @@ This package contains:
 - ETF data services for fund information
 """
 
-from src.data.alpaca_client import AlpacaClient
-from src.data.market_data_service import MarketDataService
-from src.data.fred_client import FredClient
-from src.data.bls_client import BLSClient
-from src.data.bea_client import BEAClient
-from src.data.economic_data_service import EconomicDataService
-from src.data.etf_registry import ETFRegistry, AssetClass, ETFProvider
+"""
+NOTE: We intentionally avoid importing heavy submodules here to prevent
+ImportError during application startup when optional dependencies (e.g.,
+fredapi, alpaca-py) are not installed. Import the specific clients where
+they are used, for example:
 
-__all__ = [
-    'AlpacaClient',
-    'MarketDataService',
-    'FredClient',
-    'BLSClient',
-    'BEAClient',
-    'EconomicDataService',
-    'ETFRegistry',
-    'AssetClass',
-    'ETFProvider'
-]
+    from src.data.alpaca_client import AlpacaClient
+    from src.data.fred_client import FredClient
 
-# This file marks the directory as a Python package 
+This keeps package import side-effect free.
+"""
+
+__all__ = []
+
+# This file marks the directory as a Python package
