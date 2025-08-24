@@ -426,18 +426,7 @@ export default function AdvisorPage() {
               ...portfolioData.userPreferences,
               firstName: firstName || portfolioData.userPreferences?.firstName
             }}
-            onApprove={() => {
-              console.log('Portfolio approved! Starting onboarding...');
-              // Save user data for onboarding flow
-              localStorage.setItem('user_info', JSON.stringify({
-                firstName,
-                lastName,
-                birthday,
-                age: typeof userAge === 'number' ? userAge : undefined,
-              }));
-              // Navigate to onboarding to actually create account
-              window.location.href = '/onboarding';
-            }}
+            onApprove={() => console.log('Portfolio approved!')}
             onPortfolioUpdate={handlePortfolioUpdate}
             onStartOver={handleStartOver}
           />

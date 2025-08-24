@@ -55,20 +55,8 @@ export default function Home() {
     
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
-      // Transform numeric answer keys to the 'q#' format expected by the backend
-      const riskAnswers: Record<string, string> = {};
-      for (const key in answers) {
-        if (!isNaN(parseInt(key))) {
-          riskAnswers[`q${key}`] = answers[key];
-        }
-      }
-
       const payload = {
-        answers: riskAnswers,
-        age: typeof userAge === 'number' ? userAge : undefined,
-        firstName: firstName || undefined,
-        lastName: lastName || undefined,
-        birthday: birthday || undefined,
+        answers: { ...userAnswers, ...answers, age: userAge.toString() },
       };
       console.log("Sending final payload to backend:", JSON.stringify(payload, null, 2));
 
