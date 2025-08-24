@@ -1257,7 +1257,6 @@ async def generate_portfolio_from_wizard(
         logger.error(f"Could not find glide path allocation for age {user_age} and risk {derived_risk_level}")
         raise HTTPException(status_code=500, detail="Internal error: Could not determine base portfolio allocation.")
 
-    logger.info(f"Found allocation for age {user_age}, risk '{derived_risk_level}': Range (33-37)")
     logger.info(f"Retrieved glide path allocation: {allocation_percentages}")
 
     # Format Portfolio Data (matching frontend expectations)
