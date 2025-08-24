@@ -55,19 +55,13 @@ export default function Home() {
     
     try {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
-      // Transform answer keys to the 'q#' format expected by the backend.
-      // Accept both numeric keys ("1") and already-prefixed keys ("q1").
+      // Transform numeric answer keys to the 'q#' format expected by the backend
       const riskAnswers: Record<string, string> = {};
       for (const key in answers) {
-        const val = answers[key];
-        if (!val) continue;
-        if (/^q\d+$/.test(key)) {
-          riskAnswers[key] = val;
-        } else if (/^\d+$/.test(key)) {
-          riskAnswers[`q${key}`] = val;
+        if (!isNaN(parseInt(key))) {
+          riskAnswers[`q${key}`] = answers[key];
         }
       }
-      console.log('Normalized riskAnswers keys:', Object.keys(riskAnswers));
 
       const payload = {
         answers: riskAnswers,
