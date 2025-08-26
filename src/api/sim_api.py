@@ -34,11 +34,14 @@ async def verify_api_key(x_api_key: str = Header(None)):
 # ---------------- Models ----------------
 class SimAccountCreate(BaseModel):
     user_id: UUID
-    start_cash_cents: int = Field(..., ge=0)
+    # Accept both start_cash_cents (preferred) and initial_cash_cents (legacy)
+    start_cash_cents: Optional[int] = Field(None, ge=0)
+    initial_cash_cents: Optional[int] = Field(None, ge=0)
 
 class InitPortfolioRequest(BaseModel):
     targets: Dict[str, float]  # symbol -> weight (0..1 or 0..100)
-    as_of: date
+    # If omitted, we'll default to the latest available common price date
+    as_of: Optional[date] = None
     idempotency_key: Optional[str] = None
 
 class SimAccountSummary(BaseModel):
@@ -96,25 +99,46 @@ async def create_sim_account(payload: SimAccountCreate, api_key: str = Depends(v
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
-    acc = supabase.table("sim_account").insert({
-        "user_id": str(payload.user_id),
-        "start_cash_cents": int(payload.start_cash_cents),
-        "created_at": datetime.utcnow().isoformat() + "Z",
-    }).execute()
+    # Resolve cash from preferred or legacy field
+    start_cash = payload.start_cash_cents if payload.start_cash_cents is not None else payload.initial_cash_cents
+    if start_cash is None:
+        raise HTTPException(status_code=422, detail="start_cash_cents (or initial_cash_cents) is required and must be >= 0")
+
+    try:
+        acc = (
+            supabase
+            .table("sim_account")
+            .insert({
+                "user_id": str(payload.user_id),
+                "start_cash_cents": int(start_cash),
+                "created_at": datetime.utcnow().isoformat() + "Z",
+            })
+            .select("id")
+            .execute()
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create sim_account: {e}")
+
     if not acc.data:
-        raise HTTPException(status_code=500, detail=f"Failed to create sim_account: {acc.error}")
+        raise HTTPException(status_code=500, detail="Failed to create sim_account: no data returned")
 
     account_id = acc.data[0]["id"]
-    cash = supabase.table("sim_cash").insert({
-        "account_id": account_id,
-        "cents": int(payload.start_cash_cents),
-        "updated_at": datetime.utcnow().isoformat() + "Z",
-    }).execute()
-    if cash.error:
-        supabase.table("sim_account").delete().eq("id", account_id).execute()
-        raise HTTPException(status_code=500, detail=f"Failed to init sim_cash: {cash.error}")
 
-    return {"account_id": account_id, "cash_cents": int(payload.start_cash_cents)}
+    try:
+        supabase.table("sim_cash").insert({
+            "account_id": account_id,
+            "cents": int(start_cash),
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }).execute()
+    except Exception as e:
+        # Best-effort rollback of the account row
+        try:
+            supabase.table("sim_account").delete().eq("id", account_id).execute()
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Failed to init sim_cash: {e}")
+
+    return {"account_id": account_id, "cash_cents": int(start_cash)}
 
 
 @router.post("/v1/sim/accounts/{account_id}/init-portfolio")
@@ -132,7 +156,25 @@ async def init_portfolio(account_id: UUID, payload: InitPortfolioRequest, api_ke
     cash_cents = int(cash_row.data[0]["cents"])  # available
 
     targets = _normalize_targets(payload.targets)
+    # Determine as_of: use provided date, otherwise default to the latest available common date
     as_of = payload.as_of
+    if as_of is None:
+        latest_dates: List[date] = []
+        missing_syms: List[str] = []
+        for sym in targets.keys():
+            pr = _get_latest_price(sym, None)
+            if not pr:
+                missing_syms.append(sym)
+            else:
+                d_iso = pr["date"]
+                try:
+                    latest_dates.append(date.fromisoformat(d_iso))
+                except Exception:
+                    latest_dates.append(date.fromisoformat(str(d_iso)))
+        if missing_syms:
+            raise HTTPException(status_code=400, detail=f"No prices available for symbols: {', '.join(missing_syms)}")
+        # Choose the earliest among the latests to maximize chance of all symbols having that date
+        as_of = min(latest_dates)
     idem_base = payload.idempotency_key or f"init-{as_of.isoformat()}"
 
     # Prices
@@ -181,9 +223,10 @@ async def init_portfolio(account_id: UUID, payload: InitPortfolioRequest, api_ke
     new_trades = [t for t in trades if t["idempotency_key"] not in existing_keys]
 
     if new_trades:
-        ins = supabase.table("sim_trade").insert(new_trades).execute()
-        if ins.error:
-            raise HTTPException(status_code=500, detail=f"Failed to insert trades: {ins.error}")
+        try:
+            supabase.table("sim_trade").insert(new_trades).execute()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to insert trades: {e}")
 
     # Holdings upsert
     symbols = [t["symbol"] for t in trades]
@@ -212,18 +255,20 @@ async def init_portfolio(account_id: UUID, payload: InitPortfolioRequest, api_ke
         })
 
     if upserts:
-        up = supabase.table("sim_holding").upsert(upserts, on_conflict="account_id,symbol").execute()
-        if up.error:
-            raise HTTPException(status_code=500, detail=f"Failed to upsert holdings: {up.error}")
+        try:
+            supabase.table("sim_holding").upsert(upserts, on_conflict="account_id,symbol").execute()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to upsert holdings: {e}")
 
     # Cash update
     new_cash_cents = max(0, int(round((total_cash - spent) * 100)))
-    upd = supabase.table("sim_cash").update({
-        "cents": new_cash_cents,
-        "updated_at": datetime.utcnow().isoformat() + "Z",
-    }).eq("account_id", str(account_id)).execute()
-    if upd.error:
-        raise HTTPException(status_code=500, detail=f"Failed to update cash: {upd.error}")
+    try:
+        supabase.table("sim_cash").update({
+            "cents": new_cash_cents,
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+        }).eq("account_id", str(account_id)).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update cash: {e}")
 
     return {"status": "ok", "trades_inserted": len(new_trades), "cash_cents": new_cash_cents}
 
