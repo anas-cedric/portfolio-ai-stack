@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any
 from uuid import UUID, uuid4
 from enum import Enum
 import sys
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,9 @@ from supabase import create_client, Client
 
 # Ensure project root is on sys.path so 'src' package is importable in all environments
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
+# Load .env for local development
+load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI(title="Wealth Management API", version="1.0.0")
@@ -35,6 +39,14 @@ app.add_middleware(
 from src.api.portfolio_api import app as portfolio_generation_app
 app.include_router(portfolio_generation_app.router)
 
+# Include simulation (paper trading) endpoints
+from src.api import sim_api as sim_router
+app.include_router(sim_router.router, prefix="/api")
+
+# Include model endpoints (model weights)
+from src.api import model_api as model_router
+app.include_router(model_router.router, prefix="/api")
+
 # Health and root endpoints for platform health checks
 START_TIME = datetime.utcnow()
 
@@ -43,7 +55,14 @@ async def health():
     """Lightweight health check for Railway."""
     now = datetime.utcnow()
     uptime = (now - START_TIME).total_seconds()
-    return {"status": "ok", "uptime_seconds": uptime, "timestamp": now.isoformat() + "Z"}
+    return {
+        "status": "ok",
+        "provider": PROVIDER,
+        "orders_enabled": ORDERS_ENABLED,
+        "database": "connected" if supabase else "disconnected",
+        "uptime_seconds": uptime,
+        "timestamp": now.isoformat() + "Z"
+    }
 
 @app.get("/")
 async def root():
@@ -51,12 +70,12 @@ async def root():
 
 # Environment variables
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
 PROVIDER = os.getenv("PROVIDER", "alpaca_paper")  # alpaca_paper or atomic
 ORDERS_ENABLED = os.getenv("ORDERS_ENABLED", "true").lower() == "true"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
-# Initialize Supabase client
+# Initialize Supabase client (prefer service role key for server-side writes)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
 # ==================== Models ====================
@@ -215,21 +234,6 @@ async def call_openai_explain(template: str, context: Dict[str, Any]) -> str:
     return "Portfolio allocation optimized for your risk profile and investment horizon."
 
 # ==================== Routes ====================
-
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {"message": "Portfolio AI API", "status": "running"}
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "provider": PROVIDER,
-        "orders_enabled": ORDERS_ENABLED,
-        "database": "connected" if supabase else "disconnected"
-    }
 
 @app.post("/risk/score")
 async def score_risk_assessment(
