@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime, date
-from uuid import UUID
+from uuid import UUID, uuid4
 from typing import Dict, Any, List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Header, Query
@@ -104,25 +104,17 @@ async def create_sim_account(payload: SimAccountCreate, api_key: str = Depends(v
     if start_cash is None:
         raise HTTPException(status_code=422, detail="start_cash_cents (or initial_cash_cents) is required and must be >= 0")
 
+    # Generate the account id client-side so we don't depend on RETURNING
+    account_id = str(uuid4())
     try:
-        acc = (
-            supabase
-            .table("sim_account")
-            .insert({
-                "user_id": str(payload.user_id),
-                "start_cash_cents": int(start_cash),
-                "created_at": datetime.utcnow().isoformat() + "Z",
-            })
-            .select("id")
-            .execute()
-        )
+        supabase.table("sim_account").insert({
+            "id": account_id,
+            "user_id": str(payload.user_id),
+            "start_cash_cents": int(start_cash),
+            "created_at": datetime.utcnow().isoformat() + "Z",
+        }).execute()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create sim_account: {e}")
-
-    if not acc.data:
-        raise HTTPException(status_code=500, detail="Failed to create sim_account: no data returned")
-
-    account_id = acc.data[0]["id"]
 
     try:
         supabase.table("sim_cash").insert({
