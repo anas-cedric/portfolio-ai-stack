@@ -157,7 +157,18 @@ async def verify_api_key(x_api_key: str = Header(None)):
     """Verify API key for authentication"""
     if not x_api_key:
         raise HTTPException(status_code=401, detail="API key required")
-    # In production, validate against stored keys
+    
+    # Get valid API key from environment
+    valid_key = os.getenv("VALID_API_KEY", "demo_key")
+    
+    # In development, accept demo_key
+    if os.getenv("RAILWAY_ENVIRONMENT") != "production" and x_api_key == "demo_key":
+        return x_api_key
+    
+    # In production, validate against stored key
+    if x_api_key != valid_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
     return x_api_key
 
 # ==================== Helper Functions ====================
