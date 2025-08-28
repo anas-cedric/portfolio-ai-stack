@@ -16,131 +16,93 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Navigation */}
-      <nav className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <Image 
-                src="/images/cedric-logo.svg" 
-                alt="Cedric" 
-                width={40} 
-                height={40}
-                className="rounded-full"
-              />
-              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">Cedric</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/api/auth/login">
-                <Button variant="outline" className="font-medium">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/api/auth/register">
-                <Button className="bg-green-600 hover:bg-green-700 text-white font-medium">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </div>
+    <div className="w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center">
+      {/* Header with Logo */}
+      <div className="absolute top-8 left-8 flex items-center space-x-3">
+        <div className="border border-white rounded-full px-3 py-1">
+          <span className="text-sm font-medium text-white tracking-wider uppercase">
+            Cedric
+          </span>
         </div>
-      </nav>
+      </div>
 
-      {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="text-center">
-          <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6">
-            Build Your Perfect Portfolio
-            <span className="block text-green-600 mt-2">In Minutes, Not Hours</span>
-          </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 max-w-3xl mx-auto">
-            Answer a few questions about your goals and risk tolerance. 
-            Our AI creates a personalized investment portfolio, then helps you implement it.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/api/auth/register">
-              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-6 text-lg">
-                Start Building Your Portfolio
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
+      {/* Auth buttons in top right */}
+      <div className="absolute top-8 right-8 flex items-center space-x-4">
+        <Link href="/api/auth/login">
+          <button className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+            Sign In
+          </button>
+        </Link>
+        <Link href="/api/auth/register">
+          <button className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 backdrop-blur-sm border border-white/20">
+            Get Started
+          </button>
+        </Link>
+      </div>
+
+      {/* Main Content Card */}
+      <div 
+        className="flex flex-col items-center gap-12 w-[616px] h-[600px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
+        style={{
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Content */}
+        <div className="flex flex-col items-center text-center space-y-8 mt-8">
+          <div className="space-y-6">
+            <h1 className="text-4xl font-bold text-white leading-tight">
+              Build Your Perfect Portfolio
+            </h1>
+            <p className="text-lg text-white/80 max-w-md leading-relaxed">
+              Answer a few questions about your goals and risk tolerance. 
+              Our AI creates a personalized investment portfolio, then helps you implement it.
+            </p>
+          </div>
+          
+          <div className="bg-white/10 border border-white/10 rounded-[16px] p-6 space-y-4 max-w-md">
+            <h3 className="font-semibold text-white">What you'll get:</h3>
+            <ul className="text-left space-y-3 text-white/80 text-sm">
+              <li className="flex items-center">
+                <span className="w-2 h-2 bg-white rounded-full mr-3"></span>
+                Personalized asset allocation based on your risk profile
+              </li>
+              <li className="flex items-center">
+                <span className="w-2 h-2 bg-white rounded-full mr-3"></span>
+                Diversified portfolio across multiple asset classes
+              </li>
+              <li className="flex items-center">
+                <span className="w-2 h-2 bg-white rounded-full mr-3"></span>
+                Professional-grade investment recommendations
+              </li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-3 w-full max-w-sm">
+            <Link href="/api/auth/register" className="w-full">
+              <button className="flex items-center justify-center w-full px-8 py-4 bg-white rounded-full transition-all duration-200 hover:bg-white/90">
+                <span className="text-[16px] leading-[24px] font-medium text-slate-900">
+                  Start Building Your Portfolio
+                </span>
+                <ArrowRight className="ml-2 w-5 h-5 text-slate-700" />
+              </button>
             </Link>
-            <Link href="/api/auth/login">
-              <Button size="lg" variant="outline" className="font-semibold px-8 py-6 text-lg">
-                Already have an account?
-                <ChevronRight className="ml-2 w-5 h-5" />
-              </Button>
+            
+            <Link href="/api/auth/login" className="w-full">
+              <button className="flex items-center justify-center w-full px-8 py-3 bg-white/20 border border-white/30 rounded-full transition-all duration-200 hover:bg-white/30">
+                <span className="text-[14px] leading-[20px] font-medium text-white">
+                  Already have an account?
+                </span>
+                <ChevronRight className="ml-2 w-4 h-4 text-white/80" />
+              </button>
             </Link>
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-4">
+          
+          <p className="text-xs text-white/60">
             Free account • Paper trading available • No credit card required
           </p>
         </div>
       </div>
 
-      {/* Features */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <Card className="text-center">
-            <CardContent className="pt-8">
-              <div className="bg-green-100 dark:bg-green-900/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-green-600">1</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">Answer Questions</h3>
-              <p className="text-slate-600 dark:text-slate-400">
-                Tell us about your investment goals, timeline, and risk tolerance.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardContent className="pt-8">
-              <div className="bg-green-100 dark:bg-green-900/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-green-600">2</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">Get Your Portfolio</h3>
-              <p className="text-slate-600 dark:text-slate-400">
-                Our AI creates a diversified portfolio tailored to your needs.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardContent className="pt-8">
-              <div className="bg-green-100 dark:bg-green-900/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-green-600">3</span>
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">Start Investing</h3>
-              <p className="text-slate-600 dark:text-slate-400">
-                Implement your portfolio with our step-by-step guidance.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <Card className="bg-gradient-to-r from-green-600 to-green-700 text-white">
-          <CardContent className="text-center py-16">
-            <h2 className="text-3xl font-bold mb-4">
-              Ready to Start Investing Smarter?
-            </h2>
-            <p className="text-lg text-green-100 mb-8">
-              Join thousands of investors using our platform to build wealth intelligently.
-            </p>
-            <Link href="/api/auth/register">
-              <Button size="lg" className="bg-white text-green-600 hover:bg-slate-50 font-semibold px-8 py-4">
-                Create Free Account
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-            <p className="text-sm text-green-200 mt-4">
-              Start with paper trading • No investment required
-            </p>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

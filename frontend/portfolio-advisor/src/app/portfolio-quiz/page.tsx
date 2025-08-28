@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useUserProfile } from "@/contexts/UserContext";
 import axios from 'axios';
@@ -32,8 +32,9 @@ type PortfolioState = PortfolioResponse | null;
 type Step = 'welcome' | 'stepOne' | 'questionnaire' | 'results';
 const STEPS: Step[] = ['welcome', 'stepOne', 'questionnaire', 'results'];
 
-export default function PortfolioQuizPage() {
+function PortfolioQuizContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoading: isAuthLoading, getAccessToken } = useKindeBrowserClient();
   const { updateProfile } = useUserProfile();
   const [portfolioData, setPortfolioData] = useState<PortfolioState>(null);
@@ -46,12 +47,19 @@ export default function PortfolioQuizPage() {
   const [birthday, setBirthday] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated and handle step parameter
   useEffect(() => {
     if (!isAuthLoading && !user) {
       router.push('/api/auth/login');
+      return;
     }
-  }, [user, isAuthLoading, router]);
+
+    // Check for step parameter in URL (from auth redirect)
+    const stepParam = searchParams.get('step');
+    if (stepParam && STEPS.includes(stepParam as Step)) {
+      setCurrentStep(stepParam as Step);
+    }
+  }, [user, isAuthLoading, router, searchParams]);
 
   // Pre-populate user info from Kinde if available
   useEffect(() => {
@@ -384,5 +392,20 @@ export default function PortfolioQuizPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function PortfolioQuizPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full h-screen flex items-center justify-center clouds-bg">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    }>
+      <PortfolioQuizContent />
+    </Suspense>
   );
 }
