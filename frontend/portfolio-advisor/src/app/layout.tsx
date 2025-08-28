@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { UserProvider } from "@/contexts/UserContext";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
@@ -34,10 +35,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="w-full min-h-screen">
-            {children}
-          </main>
-          <Analytics />
+          <UserProvider>
+            <main className="w-full min-h-screen">
+              {children}
+            </main>
+            <Analytics />
+          </UserProvider>
         </ThemeProvider>
       </body>
     </html>

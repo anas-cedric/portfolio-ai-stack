@@ -3,15 +3,15 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, Shield, TrendingUp, Zap, ChevronRight, BarChart3 } from 'lucide-react';
+import { ArrowRight, Shield, TrendingUp, Zap, ChevronRight } from 'lucide-react';
 
-export default async function HomePage() {
+export default async function LandingPage() {
   // Check if user is authenticated
   const user = await getAuthUser();
 
-  // If authenticated, redirect to portfolio quiz
+  // If authenticated, redirect to dashboard
   if (user) {
-    redirect('/portfolio-quiz');
+    redirect('/dashboard');
   }
 
   return (
@@ -20,12 +20,12 @@ export default async function HomePage() {
       <nav className="glass-card mx-4 mt-4 sm:mx-8 sm:mt-8 p-4 rounded-2xl">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <BarChart3 className="w-8 h-8 text-blue-600" />
+            <Shield className="w-8 h-8 text-blue-600" />
             <span className="text-xl font-bold text-gray-900">Portfolio Advisor</span>
           </div>
           <div className="flex items-center space-x-4">
             <Link href="/api/auth/login">
-              <Button variant="outline" className="font-medium bg-white/50 backdrop-blur-sm">
+              <Button variant="outline" className="font-medium">
                 Sign In
               </Button>
             </Link>
@@ -42,12 +42,12 @@ export default async function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
           <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6">
-            Build Your Perfect Portfolio
-            <span className="block text-blue-600 mt-2">In Minutes, Not Hours</span>
+            Intelligent Portfolio Management
+            <span className="block text-blue-600 mt-2">Made Simple</span>
           </h1>
           <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto">
-            Answer a few questions about your goals and risk tolerance. 
-            Our AI creates a personalized investment portfolio, then helps you implement it.
+            Build a personalized investment portfolio based on your risk profile, goals, and timeline. 
+            Get started in minutes with our AI-powered advisor.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/api/auth/register">
@@ -56,55 +56,12 @@ export default async function HomePage() {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link href="/api/auth/login">
+            <Link href="/">
               <Button size="lg" variant="outline" className="font-semibold px-8 py-6 text-lg rounded-xl bg-white/50 backdrop-blur-sm">
-                Already have an account?
+                Try Demo
                 <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-          </div>
-          <p className="text-sm text-gray-600 mt-4">
-            Free account • Paper trading available • No credit card required
-          </p>
-        </div>
-      </div>
-
-      {/* How it Works */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">How It Works</h2>
-          <p className="text-xl text-gray-700">Get a professional portfolio in 3 simple steps</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="glass-card p-8 text-center">
-            <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-blue-600">1</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Answer Questions</h3>
-            <p className="text-gray-700">
-              Tell us about your investment goals, timeline, and risk tolerance through our simple questionnaire.
-            </p>
-          </div>
-
-          <div className="glass-card p-8 text-center">
-            <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-green-600">2</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Get Your Portfolio</h3>
-            <p className="text-gray-700">
-              Our AI analyzes your profile and creates a diversified portfolio tailored to your needs.
-            </p>
-          </div>
-
-          <div className="glass-card p-8 text-center">
-            <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-purple-600">3</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Start Investing</h3>
-            <p className="text-gray-700">
-              Review your recommendations, open an account, and begin building wealth intelligently.
-            </p>
           </div>
         </div>
       </div>
@@ -161,7 +118,7 @@ export default async function HomePage() {
               </Button>
             </Link>
             <p className="text-sm text-gray-600 mt-4">
-              Start with paper trading • No investment required
+              No credit card required • Start with paper trading
             </p>
           </CardContent>
         </Card>

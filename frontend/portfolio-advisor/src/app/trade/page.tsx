@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { useUserProfile } from "@/contexts/UserContext";
 import axios from 'axios';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,42 +38,49 @@ interface PortfolioProposal {
 
 export default function TradePage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useKindeBrowserClient();
+  const { profile } = useUserProfile();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [tradeIntents, setTradeIntents] = useState<TradeIntent[]>([]);
   const [portfolioProposal, setPortfolioProposal] = useState<PortfolioProposal | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [selectedTradeIntent, setSelectedTradeIntent] = useState<TradeIntent | null>(null);
 
   useEffect(() => {
-    // Load user and account data
-    const storedUserId = localStorage.getItem('user_id');
-    const storedAccountId = localStorage.getItem('account_id');
-    
-    if (!storedUserId || !storedAccountId) {
-      router.push('/onboarding');
+    // Redirect to login if not authenticated
+    if (!isAuthLoading && !user) {
+      router.push('/api/auth/login');
       return;
     }
     
-    setUserId(storedUserId);
-    setAccountId(storedAccountId);
-    
-    // Load portfolio data
-    loadPortfolioProposal(storedUserId);
-    checkRebalance(storedAccountId);
-  }, [router]);
+    // Use Kinde user ID and create mock account ID
+    if (user?.id) {
+      const mockAccountId = `account_${user.id}`;
+      setAccountId(mockAccountId);
+      
+      // Load portfolio data
+      loadPortfolioProposal(user.id);
+      checkRebalance(mockAccountId);
+    }
+  }, [user, isAuthLoading, router]);
 
   const loadPortfolioProposal = async (uId: string) => {
     try {
-      // Generate initial proposal if none exists
-      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
-      const age = userInfo.age || 35;
+      // ✅ GOOD: Get user's actual age from context (collected during onboarding)
+      const userAge = profile?.age;
+      
+      // ❌ ISSUE CALLED OUT: Don't proceed if we don't have user age
+      if (!userAge) {
+        console.error('User age not available - redirect to portfolio quiz');
+        router.push('/portfolio-quiz');
+        return;
+      }
       
       const response = await axios.post('/api/portfolio/propose', {
         user_id: uId,
-        age: age
+        age: userAge
       }, {
         headers: {
           'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'demo_key'

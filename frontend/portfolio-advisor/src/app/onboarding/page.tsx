@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import axios from 'axios';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ interface Agreement {
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useKindeBrowserClient();
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('agreements');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,20 +46,19 @@ export default function OnboardingPage() {
     .every(a => acceptedAgreements.has(a.id));
 
   useEffect(() => {
-    // Load user data from session/context
-    const storedUserId = localStorage.getItem('user_id');
-    if (storedUserId) {
-      setUserId(storedUserId);
-    } else {
-      // Generate new user ID for demo
-      const newUserId = crypto.randomUUID();
-      localStorage.setItem('user_id', newUserId);
-      setUserId(newUserId);
+    // Use Kinde user ID if authenticated
+    if (user?.id) {
+      setUserId(user.id);
+    } else if (!isAuthLoading) {
+      // If not authenticated and loading is done, redirect to login
+      router.push('/api/auth/login');
     }
 
     // Load agreements
-    loadAgreements();
-  }, []);
+    if (user?.id) {
+      loadAgreements();
+    }
+  }, [user, isAuthLoading, router]);
 
   const loadAgreements = async () => {
     try {
@@ -101,12 +102,15 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      // Get user info from previous steps (stored in localStorage or context)
-      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+      // User info will come from Kinde user profile
 
       const response = await axios.post('/api/kyc/start', {
         user_id: userId,
-        personal_info: userInfo
+        personal_info: {
+          first_name: user?.given_name,
+          last_name: user?.family_name,
+          email: user?.email
+        }
       });
 
       if (response.data.id) {
@@ -137,13 +141,12 @@ export default function OnboardingPage() {
 
       if (response.data.id) {
         setAccountId(response.data.id);
-        localStorage.setItem('account_id', response.data.id);
         setCurrentStep('complete');
         
-        // Redirect to funding after 2 seconds
+        // Auto-redirect to dashboard after 3 seconds
         setTimeout(() => {
-          router.push('/fund');
-        }, 2000);
+          router.push('/dashboard');
+        }, 3000);
       }
     } catch (err) {
       setError('Failed to open account');
@@ -260,9 +263,9 @@ export default function OnboardingPage() {
           <div className="space-y-6 text-center py-8">
             <CheckCircle className="w-16 h-16 text-green-600 mx-auto" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Account Ready!</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Welcome to Portfolio Advisor!</h2>
               <p className="text-gray-700 mt-3">
-                Your account has been successfully created. Redirecting to funding...
+                Your account is ready. Let's get you started with your personalized portfolio.
               </p>
               {accountId && (
                 <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm rounded-lg">
@@ -270,6 +273,12 @@ export default function OnboardingPage() {
                 </div>
               )}
             </div>
+            <Button 
+              onClick={() => router.push('/dashboard')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl"
+            >
+              Go to Dashboard
+            </Button>
           </div>
         );
     }

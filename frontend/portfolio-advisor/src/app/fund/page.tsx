@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import axios from 'axios';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,30 +21,30 @@ interface Transfer {
 
 export default function FundPage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useKindeBrowserClient();
   const [amount, setAmount] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load user and account data
-    const storedUserId = localStorage.getItem('user_id');
-    const storedAccountId = localStorage.getItem('account_id');
-    
-    if (!storedUserId || !storedAccountId) {
-      router.push('/onboarding');
+    // Redirect to login if not authenticated
+    if (!isAuthLoading && !user) {
+      router.push('/api/auth/login');
       return;
     }
     
-    setUserId(storedUserId);
-    setAccountId(storedAccountId);
-    
-    // Load transfer history
-    loadTransferHistory(storedAccountId);
-  }, [router]);
+    // Use Kinde user ID and create mock account ID
+    if (user?.id) {
+      const mockAccountId = `account_${user.id}`;
+      setAccountId(mockAccountId);
+      
+      // Load transfer history
+      loadTransferHistory(mockAccountId);
+    }
+  }, [user, isAuthLoading, router]);
 
   const loadTransferHistory = async (accId: string) => {
     try {
