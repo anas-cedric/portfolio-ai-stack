@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { useUserProfile } from "@/contexts/UserContext";
 import axios from 'axios';
+import Image from 'next/image';
 import Link from 'next/link';
 import PortfolioResults from '@/components/PortfolioResults';
 import ChatInterface from '@/components/ChatInterface';
@@ -181,15 +182,27 @@ export default function PortfolioQuizPage() {
 
   const pageContainerClass = currentStep === 'results'
     ? "w-full h-screen overflow-hidden"
-    : "w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center";
+    : currentStep === 'questionnaire'
+    ? "w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center"
+    : "min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-8 px-4";
     
   return (
     <div className={pageContainerClass}>
-      {currentStep !== 'results' && (
-        <div className="relative w-full max-w-4xl mx-auto">
-          {/* Header with User Info and Logout */}
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-4">
+      {currentStep !== 'results' && currentStep !== 'questionnaire' && (
+        <div className="container mx-auto max-w-4xl">
+          {/* Header with Logo and Navigation */}
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3">
+                <Image 
+                  src="/images/cedric-logo.svg" 
+                  alt="Cedric" 
+                  width={40} 
+                  height={40}
+                  className="rounded-full"
+                />
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Cedric</h1>
+              </div>
               {currentStep !== 'welcome' && (
                 <Button 
                   variant="outline" 
@@ -200,156 +213,162 @@ export default function PortfolioQuizPage() {
                       setCurrentStep(STEPS[currentIndex - 1]);
                     }
                   }}
-                  className="glass-card"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back
                 </Button>
               )}
-              <div className="text-sm text-gray-700">
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-slate-600 dark:text-slate-400">
                 Welcome, {user.given_name || user.email}
               </div>
+              <Link href="/api/auth/logout">
+                <Button variant="outline" size="sm">
+                  Sign Out
+                </Button>
+              </Link>
             </div>
-            <Link href="/api/auth/logout">
-              <Button variant="outline" size="sm" className="glass-card">
-                Sign Out
-              </Button>
-            </Link>
           </div>
 
           {/* Progress Bar */}
           {currentStep !== 'welcome' && (
-            <div className="glass-card p-4 mb-8">
-              <div className="flex justify-between text-sm text-gray-700 mb-2">
-                <span>Portfolio Generation</span>
-                <span>{Math.round(progress)}% Complete</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
+            <Card className="mb-8">
+              <CardContent className="pt-6">
+                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-3">
+                  <span>Portfolio Generation</span>
+                  <span>{Math.round(progress)}% Complete</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </CardContent>
+            </Card>
           )}
 
           {/* Main Content Card */}
-          <div className="glass-card-questionnaire p-8">
+          <Card className="shadow-lg">
             {currentStep === 'welcome' && (
-              <div className="text-center space-y-6">
-                <div className="space-y-4">
-                  <h1 className="text-4xl font-bold text-gray-900">
-                    Let's Build Your Perfect Portfolio
-                  </h1>
-                  <p className="text-xl text-gray-700">
-                    Answer a few questions about your investment goals and risk tolerance, 
-                    and we'll create a personalized portfolio just for you.
-                  </p>
-                </div>
-                
-                <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 space-y-3">
-                  <h3 className="font-semibold text-gray-900">What you'll get:</h3>
-                  <ul className="text-left space-y-2 text-gray-700">
-                    <li className="flex items-center">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                      Personalized asset allocation based on your risk profile
-                    </li>
-                    <li className="flex items-center">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                      Diversified portfolio across multiple asset classes
-                    </li>
-                    <li className="flex items-center">
-                      <span className="w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
-                      Professional-grade investment recommendations
-                    </li>
-                  </ul>
-                </div>
+              <CardContent className="p-12">
+                <div className="text-center space-y-8">
+                  <div className="space-y-4">
+                    <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+                      Let's Build Your Perfect Portfolio
+                    </h2>
+                    <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                      Answer a few questions about your investment goals and risk tolerance, 
+                      and we'll create a personalized portfolio just for you.
+                    </p>
+                  </div>
+                  
+                  <Card className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">What you'll get:</h3>
+                      <ul className="text-left space-y-3 text-slate-600 dark:text-slate-400">
+                        <li className="flex items-center">
+                          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                          Personalized asset allocation based on your risk profile
+                        </li>
+                        <li className="flex items-center">
+                          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                          Diversified portfolio across multiple asset classes
+                        </li>
+                        <li className="flex items-center">
+                          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                          Professional-grade investment recommendations
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
 
-                <Button 
-                  onClick={handleStart} 
-                  size="lg"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-xl"
-                >
-                  Get Started
-                </Button>
-              </div>
+                  <Button 
+                    onClick={handleStart} 
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4"
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              </CardContent>
             )}
 
             {currentStep === 'stepOne' && (
-              <div className="space-y-6">
-                <div className="text-center space-y-2">
-                  <h2 className="text-3xl font-bold text-gray-900">Personal Information</h2>
-                  <p className="text-gray-700">Help us personalize your portfolio recommendations</p>
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Personal Information</h2>
+                    <p className="text-slate-600 dark:text-slate-400">Help us personalize your portfolio recommendations</p>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                      <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-slate-700 dark:text-slate-300 font-medium">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="Enter your first name"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-slate-700 dark:text-slate-300 font-medium">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Enter your last name"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="birthday" className="text-slate-700 dark:text-slate-300 font-medium">Birthday</Label>
+                      <Input
+                        id="birthday"
+                        type="date"
+                        value={birthday}
+                        onChange={(e) => setBirthday(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="age" className="text-slate-700 dark:text-slate-300 font-medium">Age</Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        min="18"
+                        max="100"
+                        value={userAge}
+                        onChange={(e) => setUserAge(e.target.value === '' ? '' : parseInt(e.target.value))}
+                        placeholder="Enter your age"
+                      />
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={handlePersonalInfoSubmit}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+                  >
+                    Continue to Questions
+                  </Button>
                 </div>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                    <p className="text-red-600 text-sm">{error}</p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-gray-700 font-medium">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="bg-white/70 border-white/80 focus:bg-white transition-all"
-                      placeholder="Enter your first name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-gray-700 font-medium">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="bg-white/70 border-white/80 focus:bg-white transition-all"
-                      placeholder="Enter your last name"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="birthday" className="text-gray-700 font-medium">Birthday</Label>
-                    <Input
-                      id="birthday"
-                      type="date"
-                      value={birthday}
-                      onChange={(e) => setBirthday(e.target.value)}
-                      className="bg-white/70 border-white/80 focus:bg-white transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="age" className="text-gray-700 font-medium">Age</Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      min="18"
-                      max="100"
-                      value={userAge}
-                      onChange={(e) => setUserAge(e.target.value === '' ? '' : parseInt(e.target.value))}
-                      className="bg-white/70 border-white/80 focus:bg-white transition-all"
-                      placeholder="Enter your age"
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={handlePersonalInfoSubmit}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl"
-                >
-                  Continue to Questions
-                </Button>
-              </div>
+              </CardContent>
             )}
 
-            {currentStep === 'questionnaire' && (
-              <ProfileWizard
-                questions={RISK_QUESTIONS}
-                onComplete={handleQuestionnaireComplete}
-                isLoading={isLoading}
-              />
-            )}
-          </div>
+          </Card>
         </div>
+      )}
+
+      {currentStep === 'questionnaire' && (
+        <ProfileWizard
+          questions={RISK_QUESTIONS}
+          onComplete={handleQuestionnaireComplete}
+          isLoading={isLoading}
+        />
       )}
 
       {currentStep === 'results' && portfolioData && (

@@ -1,6 +1,7 @@
 import { getAuthUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRight, Shield, TrendingUp, Zap, ChevronRight, BarChart3 } from 'lucide-react';
@@ -15,25 +16,33 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen clouds-bg">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Navigation */}
-      <nav className="glass-card mx-4 mt-4 sm:mx-8 sm:mt-8 p-4 rounded-2xl">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <BarChart3 className="w-8 h-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">Portfolio Advisor</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/api/auth/login">
-              <Button variant="outline" className="font-medium bg-white/50 backdrop-blur-sm">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/api/auth/register">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
-                Get Started
-              </Button>
-            </Link>
+      <nav className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <Image 
+                src="/images/cedric-logo.svg" 
+                alt="Cedric" 
+                width={40} 
+                height={40}
+                className="rounded-full"
+              />
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">Cedric</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Link href="/api/auth/login">
+                <Button variant="outline" className="font-medium">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/api/auth/register">
+                <Button className="bg-green-600 hover:bg-green-700 text-white font-medium">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
@@ -41,126 +50,92 @@ export default async function HomePage() {
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
-          <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6">
+          <h1 className="text-5xl sm:text-6xl font-bold text-slate-900 dark:text-slate-100 mb-6">
             Build Your Perfect Portfolio
-            <span className="block text-blue-600 mt-2">In Minutes, Not Hours</span>
+            <span className="block text-green-600 mt-2">In Minutes, Not Hours</span>
           </h1>
-          <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-600 dark:text-slate-400 mb-8 max-w-3xl mx-auto">
             Answer a few questions about your goals and risk tolerance. 
             Our AI creates a personalized investment portfolio, then helps you implement it.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/api/auth/register">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-6 text-lg rounded-xl">
+              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-6 text-lg">
                 Start Building Your Portfolio
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Link href="/api/auth/login">
-              <Button size="lg" variant="outline" className="font-semibold px-8 py-6 text-lg rounded-xl bg-white/50 backdrop-blur-sm">
+              <Button size="lg" variant="outline" className="font-semibold px-8 py-6 text-lg">
                 Already have an account?
                 <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
           </div>
-          <p className="text-sm text-gray-600 mt-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-4">
             Free account • Paper trading available • No credit card required
           </p>
         </div>
       </div>
 
-      {/* How it Works */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">How It Works</h2>
-          <p className="text-xl text-gray-700">Get a professional portfolio in 3 simple steps</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="glass-card p-8 text-center">
-            <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-blue-600">1</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Answer Questions</h3>
-            <p className="text-gray-700">
-              Tell us about your investment goals, timeline, and risk tolerance through our simple questionnaire.
-            </p>
-          </div>
-
-          <div className="glass-card p-8 text-center">
-            <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-green-600">2</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Get Your Portfolio</h3>
-            <p className="text-gray-700">
-              Our AI analyzes your profile and creates a diversified portfolio tailored to your needs.
-            </p>
-          </div>
-
-          <div className="glass-card p-8 text-center">
-            <div className="bg-purple-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl font-bold text-purple-600">3</span>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Start Investing</h3>
-            <p className="text-gray-700">
-              Review your recommendations, open an account, and begin building wealth intelligently.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Features */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="glass-card p-8">
-            <div className="bg-blue-100 rounded-xl w-14 h-14 flex items-center justify-center mb-4">
-              <Shield className="w-7 h-7 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Risk-Adjusted Portfolios</h3>
-            <p className="text-gray-700">
-              Our algorithm creates portfolios tailored to your risk tolerance and investment timeline.
-            </p>
-          </div>
+          <Card className="text-center">
+            <CardContent className="pt-8">
+              <div className="bg-green-100 dark:bg-green-900/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-green-600">1</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">Answer Questions</h3>
+              <p className="text-slate-600 dark:text-slate-400">
+                Tell us about your investment goals, timeline, and risk tolerance.
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="glass-card p-8">
-            <div className="bg-green-100 rounded-xl w-14 h-14 flex items-center justify-center mb-4">
-              <TrendingUp className="w-7 h-7 text-green-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Automated Rebalancing</h3>
-            <p className="text-gray-700">
-              Keep your portfolio optimized with intelligent rebalancing suggestions and execution.
-            </p>
-          </div>
+          <Card className="text-center">
+            <CardContent className="pt-8">
+              <div className="bg-green-100 dark:bg-green-900/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-green-600">2</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">Get Your Portfolio</h3>
+              <p className="text-slate-600 dark:text-slate-400">
+                Our AI creates a diversified portfolio tailored to your needs.
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="glass-card p-8">
-            <div className="bg-purple-100 rounded-xl w-14 h-14 flex items-center justify-center mb-4">
-              <Zap className="w-7 h-7 text-purple-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">AI-Powered Insights</h3>
-            <p className="text-gray-700">
-              Get personalized recommendations and market insights powered by advanced AI models.
-            </p>
-          </div>
+          <Card className="text-center">
+            <CardContent className="pt-8">
+              <div className="bg-green-100 dark:bg-green-900/20 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-green-600">3</span>
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">Start Investing</h3>
+              <p className="text-slate-600 dark:text-slate-400">
+                Implement your portfolio with our step-by-step guidance.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* CTA Section */}
+      {/* CTA */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <Card className="glass-card p-12 text-center">
-          <CardContent>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        <Card className="bg-gradient-to-r from-green-600 to-green-700 text-white">
+          <CardContent className="text-center py-16">
+            <h2 className="text-3xl font-bold mb-4">
               Ready to Start Investing Smarter?
             </h2>
-            <p className="text-lg text-gray-700 mb-8">
+            <p className="text-lg text-green-100 mb-8">
               Join thousands of investors using our platform to build wealth intelligently.
             </p>
             <Link href="/api/auth/register">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-xl">
+              <Button size="lg" className="bg-white text-green-600 hover:bg-slate-50 font-semibold px-8 py-4">
                 Create Free Account
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <p className="text-sm text-gray-600 mt-4">
+            <p className="text-sm text-green-200 mt-4">
               Start with paper trading • No investment required
             </p>
           </CardContent>

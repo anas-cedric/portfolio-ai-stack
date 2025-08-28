@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': request.headers.get('x-api-key') || ''
+        'x-api-key': process.env.RAILWAY_API_KEY || ''
       },
       body: JSON.stringify(body)
     });
