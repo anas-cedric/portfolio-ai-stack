@@ -166,30 +166,35 @@ export default function OnboardingPage() {
     switch (currentStep) {
       case 'agreements':
         return (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Review and Accept Agreements</h2>
-            <p className="text-gray-600">Please review and accept the following agreements to continue:</p>
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Review and Accept Agreements</h2>
+              <p className="text-gray-700 mt-2">Please review and accept the following agreements to continue:</p>
+            </div>
             
             <div className="space-y-3">
               {agreements.map((agreement) => (
-                <div key={agreement.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={agreement.id} className="flex items-center justify-between p-4 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl hover:bg-white/60 transition-all">
                   <div className="flex items-center space-x-3">
                     <input
                       type="checkbox"
                       id={`agreement-${agreement.id}`}
                       checked={acceptedAgreements.has(agreement.id)}
                       onChange={() => toggleAgreement(agreement.id)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
-                    <label htmlFor={`agreement-${agreement.id}`} className="cursor-pointer">
-                      <span className="font-medium">{agreement.title}</span>
-                      <span className="text-sm text-gray-500 ml-2">v{agreement.version}</span>
-                      <p className="text-sm text-gray-500">{agreement.summary}</p>
+                    <label htmlFor={`agreement-${agreement.id}`} className="cursor-pointer flex-1">
+                      <div className="font-semibold text-gray-900">
+                        {agreement.title}
+                        <span className="text-sm text-gray-600 ml-2 font-normal">v{agreement.version}</span>
+                        {agreement.required && <span className="text-red-500 ml-1">*</span>}
+                      </div>
+                      <p className="text-sm text-gray-700 mt-1">{agreement.summary}</p>
                     </label>
                   </div>
                   {agreement.pdfUrl && (
                     <a href={agreement.pdfUrl} target="_blank" rel="noopener noreferrer" 
-                       className="text-blue-600 hover:underline text-sm">
+                       className="text-blue-600 hover:text-blue-700 font-medium text-sm ml-4 whitespace-nowrap">
                       View PDF
                     </a>
                   )}
@@ -200,7 +205,7 @@ export default function OnboardingPage() {
             <Button 
               onClick={handleAcceptAgreements}
               disabled={!allRequiredChecked || isLoading}
-              className="w-full"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Accept and Continue
@@ -210,87 +215,90 @@ export default function OnboardingPage() {
 
       case 'kyc':
         return (
-          <div className="space-y-4 text-center">
-            <CheckCircle className="w-12 h-12 text-green-600 mx-auto" />
-            <h2 className="text-xl font-semibold">Identity Verification</h2>
-            
-            {process.env.NEXT_PUBLIC_PROVIDER === 'alpaca_paper' ? (
-              <>
-                <p className="text-gray-600">
+          <div className="space-y-6 text-center py-4">
+            <CheckCircle className="w-16 h-16 text-green-600 mx-auto" />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Identity Verification</h2>
+              
+              {process.env.NEXT_PUBLIC_PROVIDER === 'alpaca_paper' ? (
+                <p className="text-gray-700 mt-3">
                   For paper trading, identity verification is automatically approved.
                 </p>
-                <Button onClick={() => handleStartKYC()} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  Continue to Account Setup
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-600">
+              ) : (
+                <p className="text-gray-700 mt-3">
                   We need to verify your identity to comply with regulations.
                 </p>
-                <Button onClick={() => handleStartKYC()} disabled={isLoading}>
-                  {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  Start Verification
-                </Button>
-              </>
-            )}
+              )}
+            </div>
+            
+            <Button 
+              onClick={() => handleStartKYC()} 
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl transition-all disabled:opacity-50"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {process.env.NEXT_PUBLIC_PROVIDER === 'alpaca_paper' ? 'Continue to Account Setup' : 'Start Verification'}
+            </Button>
           </div>
         );
 
       case 'account':
         return (
-          <div className="space-y-4 text-center">
-            <Loader2 className="w-12 h-12 text-blue-600 mx-auto animate-spin" />
-            <h2 className="text-xl font-semibold">Opening Your Account</h2>
-            <p className="text-gray-600">
-              We're setting up your brokerage account. This will just take a moment...
-            </p>
+          <div className="space-y-6 text-center py-8">
+            <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin" />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Opening Your Account</h2>
+              <p className="text-gray-700 mt-3">
+                We're setting up your brokerage account. This will just take a moment...
+              </p>
+            </div>
           </div>
         );
 
       case 'complete':
         return (
-          <div className="space-y-4 text-center">
-            <CheckCircle className="w-12 h-12 text-green-600 mx-auto" />
-            <h2 className="text-xl font-semibold">Account Ready!</h2>
-            <p className="text-gray-600">
-              Your account has been successfully created. Redirecting to funding...
-            </p>
-            {accountId && (
-              <p className="text-sm text-gray-500">Account ID: {accountId}</p>
-            )}
+          <div className="space-y-6 text-center py-8">
+            <CheckCircle className="w-16 h-16 text-green-600 mx-auto" />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Account Ready!</h2>
+              <p className="text-gray-700 mt-3">
+                Your account has been successfully created. Redirecting to funding...
+              </p>
+              {accountId && (
+                <div className="mt-4 p-3 bg-white/50 backdrop-blur-sm rounded-lg">
+                  <p className="text-sm text-gray-600 font-medium">Account ID: <span className="font-mono text-gray-900">{accountId}</span></p>
+                </div>
+              )}
+            </div>
           </div>
         );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="w-full min-h-screen overflow-auto clouds-bg py-8 px-4 flex flex-col items-center">
+      <div className="max-w-2xl w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Setup</h1>
-          <p className="text-gray-600">Complete these steps to start investing</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Account Setup</h1>
+          <p className="text-gray-700 text-lg">Complete these steps to start investing</p>
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-8">
+        <div className="glass-card p-4 mb-8">
           <Progress value={stepProgress[currentStep]} className="h-2" />
-          <div className="flex justify-between mt-2 text-sm text-gray-600">
-            <span className={currentStep === 'agreements' ? 'font-semibold' : ''}>Agreements</span>
-            <span className={['kyc', 'account', 'complete'].includes(currentStep) ? 'font-semibold' : ''}>Verification</span>
-            <span className={['account', 'complete'].includes(currentStep) ? 'font-semibold' : ''}>Account</span>
-            <span className={currentStep === 'complete' ? 'font-semibold' : ''}>Complete</span>
+          <div className="flex justify-between mt-3 text-sm text-gray-700 font-medium">
+            <span className={currentStep === 'agreements' ? 'font-bold text-gray-900' : ''}>Agreements</span>
+            <span className={['kyc', 'account', 'complete'].includes(currentStep) ? 'font-bold text-gray-900' : ''}>Verification</span>
+            <span className={['account', 'complete'].includes(currentStep) ? 'font-bold text-gray-900' : ''}>Account</span>
+            <span className={currentStep === 'complete' ? 'font-bold text-gray-900' : ''}>Complete</span>
           </div>
         </div>
 
-        {/* Main Card */}
-        <Card>
-          <CardContent className="pt-6">
-            {renderStepContent()}
-          </CardContent>
-        </Card>
+        {/* Main Card with Glass Effect */}
+        <div className="glass-card p-8">
+          {renderStepContent()}
+        </div>
 
         {/* Error Dialog */}
         <AlertDialog open={!!error}>
@@ -310,8 +318,8 @@ export default function OnboardingPage() {
 
         {/* Demo Mode Banner */}
         {process.env.NEXT_PUBLIC_PROVIDER === 'alpaca_paper' && (
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
+          <div className="mt-6 glass-card p-4 bg-yellow-50/30">
+            <p className="text-sm text-yellow-900 font-medium">
               <strong>Demo Mode:</strong> You're using Alpaca Paper Trading. 
               All transactions are simulated and no real money is involved.
             </p>
