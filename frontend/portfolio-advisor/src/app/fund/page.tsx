@@ -70,7 +70,7 @@ export default function FundPage() {
       const amountCents = Math.round(parseFloat(amount) * 100);
       
       const response = await axios.post('/api/funding/transfer', {
-        user_id: userId,
+        user_id: user?.id,
         account_id: accountId,
         amount_cents: amountCents,
         direction: 'deposit'

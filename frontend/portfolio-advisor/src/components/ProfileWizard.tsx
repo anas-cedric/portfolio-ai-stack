@@ -150,11 +150,13 @@ interface Answers {
 interface ProfileWizardProps {
   questions: Question[];
   onComplete: (answers: Answers) => void; // Changed signature: expects simple answers object
+  isLoading?: boolean; // Optional loading state
 }
 
 const ProfileWizard: React.FC<ProfileWizardProps> = ({ 
   questions, 
-  onComplete 
+  onComplete,
+  isLoading = false
 }) => {
   const [currentStep, setCurrentStep] = useState(0); // 0-based index for riskQuestions
   const [answers, setAnswers] = useState<Answers>({});
@@ -292,24 +294,35 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
           {/* Next/Finish Button */}
           <button
             onClick={isLastStep ? handleSubmit : handleNext}
-            disabled={!isCurrentQuestionAnswered}
+            disabled={!isCurrentQuestionAnswered || isLoading}
             className={`flex items-center justify-between px-8 py-4 h-[56px] w-[288px] bg-white rounded-full transition-all duration-200 ${
-              !isCurrentQuestionAnswered 
+              !isCurrentQuestionAnswered || isLoading
                 ? 'opacity-50 cursor-not-allowed' 
                 : 'hover:bg-white/90'
             }`}
           >
-            <span className="text-[16px] leading-[24px] font-medium text-[#00121F] font-inter">
-              {isLastStep ? 'Finish' : 'Next'}
-            </span>
-            <div className="w-[28px] h-[28px] bg-gray-400 rounded-full flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path 
-                  d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z" 
-                  fill="white"
-                />
-              </svg>
-            </div>
+            {isLoading && isLastStep ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-[#00121F]" />
+                <span className="text-[16px] leading-[24px] font-medium text-[#00121F] font-inter ml-2">
+                  Generating...
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[16px] leading-[24px] font-medium text-[#00121F] font-inter">
+                  {isLastStep ? 'Finish' : 'Next'}
+                </span>
+                <div className="w-[28px] h-[28px] bg-gray-400 rounded-full flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path 
+                      d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z" 
+                      fill="white"
+                    />
+                  </svg>
+                </div>
+              </>
+            )}
           </button>
         </div>
       </div>

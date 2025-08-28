@@ -31,7 +31,6 @@ export default function OnboardingPage() {
   const [acceptedAgreements, setAcceptedAgreements] = useState<Set<string>>(new Set());
   const [kycApplicationId, setKycApplicationId] = useState<string | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   
   // Progress calculation
   const stepProgress = {
@@ -46,15 +45,13 @@ export default function OnboardingPage() {
     .every(a => acceptedAgreements.has(a.id));
 
   useEffect(() => {
-    // Use Kinde user ID if authenticated
-    if (user?.id) {
-      setUserId(user.id);
-    } else if (!isAuthLoading) {
-      // If not authenticated and loading is done, redirect to login
+    // Redirect to login if not authenticated
+    if (!isAuthLoading && !user) {
       router.push('/api/auth/login');
+      return;
     }
 
-    // Load agreements
+    // Load agreements when user is authenticated
     if (user?.id) {
       loadAgreements();
     }
@@ -83,7 +80,7 @@ export default function OnboardingPage() {
 
     try {
       const response = await axios.post('/api/agreements/accept', {
-        user_id: userId,
+        user_id: user?.id,
         agreement_ids: Array.from(acceptedAgreements)
       });
 
@@ -105,7 +102,7 @@ export default function OnboardingPage() {
       // User info will come from Kinde user profile
 
       const response = await axios.post('/api/kyc/start', {
-        user_id: userId,
+        user_id: user?.id,
         personal_info: {
           first_name: user?.given_name,
           last_name: user?.family_name,
@@ -135,7 +132,7 @@ export default function OnboardingPage() {
 
     try {
       const response = await axios.post('/api/accounts/open', {
-        user_id: userId,
+        user_id: user?.id,
         kyc_application_id: kycId || kycApplicationId
       });
 

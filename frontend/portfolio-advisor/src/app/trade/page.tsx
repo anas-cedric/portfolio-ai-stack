@@ -158,7 +158,7 @@ export default function TradePage() {
 
     try {
       const response = await axios.post('/api/orders/submit', {
-        user_id: userId,
+        user_id: user?.id,
         account_id: accountId,
         trade_intent_id: tradeIntent.id
       }, {

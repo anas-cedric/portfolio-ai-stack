@@ -17,11 +17,12 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PortfolioAllocationPageProps {
-  portfolioData: PortfolioData;
+  portfolioData: PortfolioResponse | PortfolioData;
   onApprove?: () => void;
   userPreferences?: any;
   onPortfolioUpdate?: (updated: PortfolioResponse) => void;
   onStartOver?: () => void;
+  onProceedToOnboarding?: () => void;
 }
 
 const InfoIcon = () => (
@@ -64,7 +65,7 @@ const ETF_DESCRIPTIONS: Record<string, string> = {
   'CASH': 'Cash and cash equivalents provide liquidity and stability with minimal risk.'
 };
 
-const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver }) => {
+const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver, onProceedToOnboarding }) => {
   const [showScrollTop, setShowScrollTop] = React.useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   
@@ -93,6 +94,11 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
   if (!portfolioData) {
     return <p>No portfolio data.</p>;
   }
+
+  // Extract actual portfolio data if it's wrapped in a PortfolioResponse
+  const actualPortfolioData: PortfolioData = 'portfolioData' in portfolioData 
+    ? portfolioData.portfolioData 
+    : portfolioData;
 
   return (
     <TooltipProvider>
@@ -161,7 +167,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {portfolioData.holdings
+                  {actualPortfolioData.holdings
                     .sort((a, b) => b.percentage - a.percentage)
                     .map((holding, idx) => (
                     <TableRow key={idx} className="border-b border-[#00121F]/5">
@@ -230,7 +236,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
           <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-[#E6EFF3] via-[#E6EFF3] to-transparent pt-8 pb-6">
             <div className="max-w-[744px] mx-auto px-8">
               <ChatInterface 
-                portfolioData={portfolioData} 
+                portfolioData={actualPortfolioData} 
                 userPreferences={userPreferences}
                 onPortfolioUpdate={onPortfolioUpdate}
                 onApprove={onApprove}
@@ -251,7 +257,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
         </div>
 
         {/* Right section - Black section with chart */}
-        <AllocationSidebar portfolioData={portfolioData} onApprove={onApprove} />
+        <AllocationSidebar portfolioData={actualPortfolioData} onApprove={onProceedToOnboarding} />
       </div>
     </TooltipProvider>
   );

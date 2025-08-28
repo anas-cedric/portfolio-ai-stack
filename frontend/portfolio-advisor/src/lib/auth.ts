@@ -69,13 +69,16 @@ export async function hasPermission(permission: string): Promise<boolean> {
 
 /**
  * Get user's custom properties (risk profile, etc)
+ * Note: Custom properties need to be retrieved via Kinde Management API
  */
 export async function getUserProperties() {
-  const { getUserProperties, isAuthenticated } = getKindeServerSession();
+  const { getUser, isAuthenticated } = getKindeServerSession();
   
   if (!(await isAuthenticated())) {
     return null;
   }
   
-  return await getUserProperties();
+  const user = await getUser();
+  // For now, return empty object. Custom properties would require Management API call
+  return {};
 }
