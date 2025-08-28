@@ -190,184 +190,164 @@ function PortfolioQuizContent() {
 
   const pageContainerClass = currentStep === 'results'
     ? "w-full h-screen overflow-hidden"
-    : currentStep === 'questionnaire'
-    ? "w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center"
-    : "min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 py-8 px-4";
+    : "w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center";
     
   return (
     <div className={pageContainerClass}>
       {currentStep !== 'results' && currentStep !== 'questionnaire' && (
-        <div className="container mx-auto max-w-4xl">
-          {/* Header with Logo and Navigation */}
-          <div className="flex justify-between items-center mb-8">
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-3">
-                <Image 
-                  src="/images/cedric-logo.svg" 
-                  alt="Cedric" 
-                  width={40} 
-                  height={40}
-                  className="rounded-full"
-                />
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Cedric</h1>
-              </div>
-              {currentStep !== 'welcome' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    const currentIndex = STEPS.indexOf(currentStep);
-                    if (currentIndex > 0) {
-                      setCurrentStep(STEPS[currentIndex - 1]);
-                    }
-                  }}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-              )}
+        <div 
+          className="absolute flex flex-col items-start gap-12 w-[616px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
+          style={{
+            left: 'calc(50% - 616px/2)',
+            top: 'calc(50% - 667px/2)',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Top Section */}
+          <div className="flex flex-row justify-between items-center w-full">
+            {/* Logo */}
+            <div className="flex items-center justify-center border border-white rounded-full px-3 py-1">
+              <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
+                Cedric
+              </span>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                Welcome, {user.given_name || user.email}
-              </div>
+            
+            {/* User info and logout */}
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-white/80">
+                {user.given_name || user.email}
+              </span>
               <Link href="/api/auth/logout">
-                <Button variant="outline" size="sm">
+                <button className="text-white/60 hover:text-white/80 text-sm transition-colors">
                   Sign Out
-                </Button>
+                </button>
               </Link>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          {currentStep !== 'welcome' && (
-            <Card className="mb-8">
-              <CardContent className="pt-6">
-                <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-3">
-                  <span>Portfolio Generation</span>
-                  <span>{Math.round(progress)}% Complete</span>
-                </div>
-                <Progress value={progress} className="h-2" />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Main Content Card */}
-          <Card className="shadow-lg">
+          {/* Main Content */}
+          <div className="flex flex-col items-center w-full">
             {currentStep === 'welcome' && (
-              <CardContent className="p-12">
-                <div className="text-center space-y-8">
-                  <div className="space-y-4">
-                    <h2 className="text-4xl font-bold text-slate-900 dark:text-slate-100">
-                      Let's Build Your Perfect Portfolio
-                    </h2>
-                    <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                      Answer a few questions about your investment goals and risk tolerance, 
-                      and we'll create a personalized portfolio just for you.
-                    </p>
-                  </div>
-                  
-                  <Card className="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">What you'll get:</h3>
-                      <ul className="text-left space-y-3 text-slate-600 dark:text-slate-400">
-                        <li className="flex items-center">
-                          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                          Personalized asset allocation based on your risk profile
-                        </li>
-                        <li className="flex items-center">
-                          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                          Diversified portfolio across multiple asset classes
-                        </li>
-                        <li className="flex items-center">
-                          <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
-                          Professional-grade investment recommendations
-                        </li>
-                      </ul>
-                    </CardContent>
-                  </Card>
-
-                  <Button 
-                    onClick={handleStart} 
-                    size="lg"
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4"
-                  >
-                    Get Started
-                  </Button>
+              <div className="text-center space-y-8 w-full">
+                <div className="space-y-4">
+                  <h2 className="text-3xl font-bold text-white">
+                    Let's Build Your Perfect Portfolio
+                  </h2>
+                  <p className="text-lg text-white/80 max-w-md mx-auto">
+                    Answer a few questions about your investment goals and risk tolerance, 
+                    and we'll create a personalized portfolio just for you.
+                  </p>
                 </div>
-              </CardContent>
+                
+                <div className="bg-white/10 border border-white/10 rounded-[16px] p-6 space-y-4">
+                  <h3 className="font-semibold text-white mb-4">What you'll get:</h3>
+                  <ul className="text-left space-y-3 text-white/80">
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-white rounded-full mr-3"></span>
+                      Personalized asset allocation based on your risk profile
+                    </li>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-white rounded-full mr-3"></span>
+                      Diversified portfolio across multiple asset classes
+                    </li>
+                    <li className="flex items-center">
+                      <span className="w-2 h-2 bg-white rounded-full mr-3"></span>
+                      Professional-grade investment recommendations
+                    </li>
+                  </ul>
+                </div>
+
+                <button 
+                  onClick={handleStart} 
+                  className="w-full max-w-sm mx-auto px-8 py-4 bg-white rounded-full transition-all duration-200 hover:bg-white/90"
+                >
+                  <span className="text-[16px] leading-[24px] font-medium text-slate-900">
+                    Get Started
+                  </span>
+                </button>
+              </div>
             )}
 
             {currentStep === 'stepOne' && (
-              <CardContent className="p-8">
-                <div className="space-y-6">
-                  <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Personal Information</h2>
-                    <p className="text-slate-600 dark:text-slate-400">Help us personalize your portfolio recommendations</p>
+              <div className="w-full space-y-6">
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-bold text-white">Personal Information</h2>
+                  <p className="text-white/80">Help us personalize your portfolio recommendations</p>
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4">
+                    <p className="text-red-200 text-sm">{error}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="firstName" className="text-white/80 text-sm font-medium">First Name</label>
+                    <input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Enter your first name"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all"
+                    />
                   </div>
 
-                  {error && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                      <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-slate-700 dark:text-slate-300 font-medium">First Name</Label>
-                      <Input
-                        id="firstName"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="Enter your first name"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-slate-700 dark:text-slate-300 font-medium">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="Enter your last name"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="birthday" className="text-slate-700 dark:text-slate-300 font-medium">Birthday</Label>
-                      <Input
-                        id="birthday"
-                        type="date"
-                        value={birthday}
-                        onChange={(e) => setBirthday(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="age" className="text-slate-700 dark:text-slate-300 font-medium">Age</Label>
-                      <Input
-                        id="age"
-                        type="number"
-                        min="18"
-                        max="100"
-                        value={userAge}
-                        onChange={(e) => setUserAge(e.target.value === '' ? '' : parseInt(e.target.value))}
-                        placeholder="Enter your age"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <label htmlFor="lastName" className="text-white/80 text-sm font-medium">Last Name</label>
+                    <input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Enter your last name"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all"
+                    />
                   </div>
 
-                  <Button 
+                  <div className="space-y-2">
+                    <label htmlFor="birthday" className="text-white/80 text-sm font-medium">Birthday</label>
+                    <input
+                      id="birthday"
+                      type="date"
+                      value={birthday}
+                      onChange={(e) => setBirthday(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all [color-scheme:dark]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="age" className="text-white/80 text-sm font-medium">Age</label>
+                    <input
+                      id="age"
+                      type="number"
+                      min="18"
+                      max="100"
+                      value={userAge}
+                      onChange={(e) => setUserAge(e.target.value === '' ? '' : parseInt(e.target.value))}
+                      placeholder="Enter your age"
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center pt-4">
+                  <button 
+                    onClick={() => setCurrentStep('welcome')}
+                    className="px-6 py-3 bg-white/20 border border-white/30 rounded-full text-white font-medium hover:bg-white/30 transition-all"
+                  >
+                    Back
+                  </button>
+                  
+                  <button 
                     onClick={handlePersonalInfoSubmit}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
+                    className="px-8 py-3 bg-white rounded-full text-slate-900 font-medium hover:bg-white/90 transition-all"
                   >
                     Continue to Questions
-                  </Button>
+                  </button>
                 </div>
-              </CardContent>
+              </div>
             )}
-
-          </Card>
+          </div>
         </div>
       )}
 
