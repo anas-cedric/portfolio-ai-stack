@@ -13,9 +13,11 @@ type OnboardingStep = 'agreements' | 'kyc' | 'account' | 'complete';
 
 interface Agreement {
   id: string;
-  kind: string;
+  title: string;
   version: string;
-  url?: string;
+  pdfUrl: string;
+  summary: string;
+  required: boolean;
 }
 
 export default function OnboardingPage() {
@@ -37,6 +39,10 @@ export default function OnboardingPage() {
     complete: 100
   };
 
+  const allRequiredChecked = agreements
+    .filter(a => a.required)
+    .every(a => acceptedAgreements.has(a.id));
+
   useEffect(() => {
     // Load user data from session/context
     const storedUserId = localStorage.getItem('user_id');
@@ -54,18 +60,20 @@ export default function OnboardingPage() {
   }, []);
 
   const loadAgreements = async () => {
-    // In production, fetch from API
-    setAgreements([
-      { id: '1', kind: 'terms', version: '1.0', url: '/legal/terms-v1.pdf' },
-      { id: '2', kind: 'privacy', version: '1.0', url: '/legal/privacy-v1.pdf' },
-      { id: '3', kind: 'advisory', version: '1.0', url: '/legal/advisory-v1.pdf' },
-      { id: '4', kind: 'esign', version: '1.0', url: '/legal/esign-v1.pdf' }
-    ]);
+    try {
+      const res = await fetch('/api/agreements');
+      const data = await res.json();
+      setAgreements(data.agreements || []);
+    } catch {
+      setAgreements([]);
+    }
   };
 
   const handleAcceptAgreements = async () => {
-    if (acceptedAgreements.size !== agreements.length) {
-      setError('Please accept all agreements to continue');
+    const requiredIds = agreements.filter(a => a.required).map(a => a.id);
+    const missingRequired = requiredIds.filter(id => !acceptedAgreements.has(id));
+    if (missingRequired.length > 0) {
+      setError('Please accept all required agreements to continue');
       return;
     }
 
@@ -76,10 +84,6 @@ export default function OnboardingPage() {
       const response = await axios.post('/api/agreements/accept', {
         user_id: userId,
         agreement_ids: Array.from(acceptedAgreements)
-      }, {
-        headers: {
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'demo_key'
-        }
       });
 
       if (response.data.acceptances) {
@@ -103,10 +107,6 @@ export default function OnboardingPage() {
       const response = await axios.post('/api/kyc/start', {
         user_id: userId,
         personal_info: userInfo
-      }, {
-        headers: {
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'demo_key'
-        }
       });
 
       if (response.data.id) {
@@ -133,10 +133,6 @@ export default function OnboardingPage() {
       const response = await axios.post('/api/accounts/open', {
         user_id: userId,
         kyc_application_id: kycId || kycApplicationId
-      }, {
-        headers: {
-          'x-api-key': process.env.NEXT_PUBLIC_API_KEY || 'demo_key'
-        }
       });
 
       if (response.data.id) {
@@ -186,12 +182,13 @@ export default function OnboardingPage() {
                       className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                     />
                     <label htmlFor={`agreement-${agreement.id}`} className="cursor-pointer">
-                      <span className="font-medium capitalize">{agreement.kind}</span>
+                      <span className="font-medium">{agreement.title}</span>
                       <span className="text-sm text-gray-500 ml-2">v{agreement.version}</span>
+                      <p className="text-sm text-gray-500">{agreement.summary}</p>
                     </label>
                   </div>
-                  {agreement.url && (
-                    <a href={agreement.url} target="_blank" rel="noopener noreferrer" 
+                  {agreement.pdfUrl && (
+                    <a href={agreement.pdfUrl} target="_blank" rel="noopener noreferrer" 
                        className="text-blue-600 hover:underline text-sm">
                       View PDF
                     </a>
@@ -202,7 +199,7 @@ export default function OnboardingPage() {
 
             <Button 
               onClick={handleAcceptAgreements}
-              disabled={acceptedAgreements.size !== agreements.length || isLoading}
+              disabled={!allRequiredChecked || isLoading}
               className="w-full"
             >
               {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
