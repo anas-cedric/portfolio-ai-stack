@@ -205,13 +205,12 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
       {/* Top Section */}
       <div className="flex flex-row justify-between items-center w-[536px] h-[26px]">
         {/* Logo */}
-        <div className="flex items-center justify-center w-[48px] h-[48px] border border-white rounded-full bg-white/10 backdrop-blur-sm">
+        <div className="flex items-center">
           <Image 
-            src="/images/cedric-logo.svg" 
+            src="/images/cedric-logo-full.png" 
             alt="Cedric" 
-            width={32} 
+            width={100} 
             height={32}
-            className="rounded-full"
           />
         </div>
         
