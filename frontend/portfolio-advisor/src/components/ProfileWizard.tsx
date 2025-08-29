@@ -212,6 +212,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
             width={100} 
             height={32}
             className="opacity-90"
+            style={{ mixBlendMode: 'multiply' }}
           />
         </div>
         

@@ -294,6 +294,7 @@ export default function OnboardingPage() {
               width={120} 
               height={40}
               className="opacity-90"
+              style={{ mixBlendMode: 'multiply' }}
             />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Account Setup</h1>

@@ -19,13 +19,16 @@ export default async function HomePage() {
     <div className="w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center">
       {/* Header with Logo */}
       <div className="absolute top-8 left-8 flex items-center space-x-3">
-        <Image 
-          src="/images/cedric-logo-full.png" 
-          alt="Cedric" 
-          width={120} 
-          height={40}
-          className="opacity-90"
-        />
+        <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10">
+          <Image 
+            src="/images/cedric-logo-full.png" 
+            alt="Cedric" 
+            width={120} 
+            height={40}
+            className="opacity-90"
+            style={{ mixBlendMode: 'multiply' }}
+          />
+        </div>
       </div>
 
       {/* Auth buttons in top right */}

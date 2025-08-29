@@ -213,6 +213,7 @@ function PortfolioQuizContent() {
                 width={100} 
                 height={32}
                 className="opacity-90"
+                style={{ mixBlendMode: 'multiply' }}
               />
             </div>
             
