@@ -19,11 +19,13 @@ export default async function HomePage() {
     <div className="w-full h-screen overflow-hidden clouds-bg py-4 px-4 flex flex-col items-center justify-center">
       {/* Header with Logo */}
       <div className="absolute top-8 left-8 flex items-center space-x-3">
-        <div className="border border-white rounded-full px-3 py-1">
-          <span className="text-sm font-medium text-white tracking-wider uppercase">
-            Cedric
-          </span>
-        </div>
+        <Image 
+          src="/images/cedric-logo-full.png" 
+          alt="Cedric" 
+          width={120} 
+          height={40}
+          className="opacity-90"
+        />
       </div>
 
       {/* Auth buttons in top right */}

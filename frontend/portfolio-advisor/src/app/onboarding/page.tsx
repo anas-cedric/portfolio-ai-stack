@@ -288,15 +288,13 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="flex items-center justify-center w-16 h-16 border border-white rounded-full bg-white/10 backdrop-blur-sm">
-              <Image 
-                src="/images/cedric-logo.svg" 
-                alt="Cedric" 
-                width={40} 
-                height={40}
-                className="rounded-full"
-              />
-            </div>
+            <Image 
+              src="/images/cedric-logo-full.png" 
+              alt="Cedric" 
+              width={120} 
+              height={40}
+              className="opacity-90"
+            />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Account Setup</h1>
           <p className="text-gray-700 text-lg">Complete these steps to start investing</p>
