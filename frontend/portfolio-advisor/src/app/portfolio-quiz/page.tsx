@@ -206,10 +206,14 @@ function PortfolioQuizContent() {
           {/* Top Section */}
           <div className="flex flex-row justify-between items-center w-full">
             {/* Logo */}
-            <div className="flex items-center justify-center border border-white rounded-full px-3 py-1">
-              <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-                Cedric
-              </span>
+            <div className="flex items-center justify-center border border-white rounded-full w-12 h-12 bg-white/10 backdrop-blur-sm">
+              <Image 
+                src="/images/cedric-logo.svg" 
+                alt="Cedric" 
+                width={32} 
+                height={32}
+                className="rounded-full"
+              />
             </div>
             
             {/* User info and logout */}

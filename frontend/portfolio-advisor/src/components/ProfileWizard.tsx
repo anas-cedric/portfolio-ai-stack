@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -204,10 +205,14 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
       {/* Top Section */}
       <div className="flex flex-row justify-between items-center w-[536px] h-[26px]">
         {/* Logo */}
-        <div className="flex items-center justify-center w-[77px] h-[26px] border border-white rounded-full">
-          <span className="text-[14px] leading-[16px] font-normal text-white tracking-[0.08em] uppercase font-inter">
-            Cedric
-          </span>
+        <div className="flex items-center justify-center w-[48px] h-[48px] border border-white rounded-full bg-white/10 backdrop-blur-sm">
+          <Image 
+            src="/images/cedric-logo.svg" 
+            alt="Cedric" 
+            width={32} 
+            height={32}
+            className="rounded-full"
+          />
         </div>
         
         {/* Progress */}
