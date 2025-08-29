@@ -208,10 +208,10 @@ function PortfolioQuizContent() {
             {/* Logo */}
             <div className="flex items-center justify-center">
               <Image 
-                src="/images/cedric-logo-full.png" 
+                src="/images/cedric-logo-new.png" 
                 alt="Cedric" 
                 width={100} 
-                height={32}
+                height={100}
               />
             </div>
             

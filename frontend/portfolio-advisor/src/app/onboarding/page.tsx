@@ -289,10 +289,10 @@ export default function OnboardingPage() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Image 
-              src="/images/cedric-logo-full.png" 
+              src="/images/cedric-logo-new.png" 
               alt="Cedric" 
               width={120} 
-              height={40}
+              height={120}
             />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Account Setup</h1>

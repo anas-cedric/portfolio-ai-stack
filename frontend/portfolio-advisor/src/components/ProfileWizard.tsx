@@ -2,11 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react'; // For loading spinner
+import { Loader2 } from 'lucide-react';
 
 // Define the structure for each question
 interface Question {
@@ -164,7 +160,6 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
 
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentStep];
-  const progress = ((currentStep + 1) / totalQuestions) * 100;
   const isLastStep = currentStep === totalQuestions - 1;
 
   const handleOptionChange = (value: string) => {

@@ -20,10 +20,10 @@ export default async function HomePage() {
       {/* Header with Logo */}
       <div className="absolute top-8 left-8 flex items-center space-x-3">
         <Image 
-          src="/images/cedric-logo-full.png" 
+          src="/images/cedric-logo-new.png" 
           alt="Cedric" 
           width={120} 
-          height={40}
+          height={120}
         />
       </div>
 
