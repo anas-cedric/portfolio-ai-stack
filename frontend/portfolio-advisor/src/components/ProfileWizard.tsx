@@ -194,46 +194,45 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
   const isCurrentQuestionAnswered = answers[currentQuestion.id] !== undefined;
 
   return (
-    <div 
-      className="absolute flex flex-col items-start gap-12 w-[616px] h-[667px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
-      style={{
-        left: 'calc(50% - 616px/2)',
-        top: 'calc(50% - 667px/2)',
-        boxSizing: 'border-box'
-      }}
-    >
-      {/* Top Section */}
-      <div className="flex flex-row justify-between items-center w-[536px] h-[26px]">
-        {/* Logo */}
-        <div className="flex items-center">
-          <Image 
-            src="/images/cedric-logo-full.png" 
-            alt="Cedric" 
-            width={100} 
-            height={32}
-          />
-        </div>
-        
-        {/* Progress */}
-        <div className="flex flex-row items-center gap-4 w-[225px] h-[20px]">
-          <span className="w-[109px] h-[20px] text-[14px] leading-[20px] font-normal text-white/80 font-inter">
-            Question {currentStep + 1} of {totalQuestions}
-          </span>
-          <div className="flex flex-row items-center w-[100px] h-[8px] bg-white/20 rounded-full">
-            {Array.from({ length: totalQuestions }, (_, index) => (
-              <div
-                key={index}
-                className={`flex-1 h-[8px] ${
-                  index <= currentStep ? 'bg-white' : 'bg-transparent'
-                } ${
-                  index === 0 ? 'rounded-l-full' : 
-                  index === totalQuestions - 1 ? 'rounded-r-full' : ''
-                }`}
-              />
-            ))}
+    <div className="w-full h-screen flex flex-col items-center justify-center clouds-bg py-8">
+      {/* Centered Logo Above Questionnaire */}
+      <div className="flex justify-center mb-8">
+        <Image 
+          src="/images/cedric-logo-new.png" 
+          alt="Cedric" 
+          width={200} 
+          height={200}
+        />
+      </div>
+
+      {/* Questionnaire Card */}
+      <div 
+        className="flex flex-col items-start gap-12 w-[616px] h-[667px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
+        style={{
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Progress Section */}
+        <div className="flex flex-row justify-center items-center w-full">
+          <div className="flex flex-row items-center gap-4 w-[225px] h-[20px]">
+            <span className="w-[109px] h-[20px] text-[14px] leading-[20px] font-normal text-white/80 font-inter">
+              Question {currentStep + 1} of {totalQuestions}
+            </span>
+            <div className="flex flex-row items-center w-[100px] h-[8px] bg-white/20 rounded-full">
+              {Array.from({ length: totalQuestions }, (_, index) => (
+                <div
+                  key={index}
+                  className={`flex-1 h-[8px] ${
+                    index <= currentStep ? 'bg-white' : 'bg-transparent'
+                  } ${
+                    index === 0 ? 'rounded-l-full' : 
+                    index === totalQuestions - 1 ? 'rounded-r-full' : ''
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Bottom Section */}
       <div className="flex flex-col items-start gap-7 w-[536px] h-[513px]">
@@ -331,6 +330,7 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
         </div>
       </div>
     </div>
+  </div>
   );
 };
 
