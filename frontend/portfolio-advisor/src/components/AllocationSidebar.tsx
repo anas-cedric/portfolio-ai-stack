@@ -32,7 +32,52 @@ const ETF_SECTORS: Record<string, { sector: string; color: string }> = {
 };
 
 export default function AllocationSidebar({ portfolioData, onApprove }: AllocationSidebarProps) {
-  console.log('AllocationSidebar onApprove:', typeof onApprove, !!onApprove);
+  const [isExecuting, setIsExecuting] = React.useState(false);
+  const [executionStatus, setExecutionStatus] = React.useState<string | null>(null);
+  
+  const handleApproveClick = async () => {
+    if (!onApprove) return;
+    
+    setIsExecuting(true);
+    setExecutionStatus('Executing portfolio...');
+    
+    try {
+      // Convert holdings to weights format expected by API
+      const weights = portfolioData.holdings.map(holding => ({
+        symbol: holding.ticker,
+        weight: holding.percentage
+      }));
+      
+      // Call the Alpaca execution API
+      const response = await fetch('/api/portfolio/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weights,
+          totalInvestment: 10000 // Default paper trading amount
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to execute portfolio');
+      }
+      
+      console.log('Portfolio executed successfully:', result);
+      setExecutionStatus('Portfolio executed successfully!');
+      
+      // Wait a moment to show success message
+      setTimeout(() => {
+        onApprove(); // Proceed to onboarding
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Failed to execute portfolio:', error);
+      setExecutionStatus(`Error: ${error.message}`);
+      setIsExecuting(false);
+    }
+  };
   // Build holdings data (individual assets) - sorted by percentage (highest to lowest)
   const holdingsData = portfolioData.holdings
     .sort((a, b) => b.percentage - a.percentage)
@@ -140,11 +185,29 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
       {/* Fixed Approve button at bottom */}
       {onApprove && (
         <div className="absolute bottom-0 left-0 right-0 p-10 bg-[#00090F]">
+          {executionStatus && (
+            <div className={`mb-4 p-3 rounded-lg text-center ${
+              executionStatus.includes('Error') ? 'bg-red-500/20 text-red-300' : 'bg-green-500/20 text-green-300'
+            }`}>
+              {executionStatus}
+            </div>
+          )}
           <Button
-            onClick={onApprove}
-            className="bg-[#12A594] hover:bg-[#0e8f80] text-white rounded-full w-full h-14 font-medium text-base"
+            onClick={handleApproveClick}
+            disabled={isExecuting}
+            className="bg-[#12A594] hover:bg-[#0e8f80] text-white rounded-full w-full h-14 font-medium text-base disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            ✓ Approve Portfolio
+            {isExecuting ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Executing Portfolio...
+              </span>
+            ) : (
+              '✓ Approve & Execute Portfolio'
+            )}
           </Button>
         </div>
       )}

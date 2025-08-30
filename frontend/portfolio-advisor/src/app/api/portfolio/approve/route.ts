@@ -1,0 +1,237 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { 
+  createPaperAccount, 
+  getAccount, 
+  createJournalUSD, 
+  placeOrder,
+  generateClientOrderId,
+  getLatestTrades,
+  calculateNotionalAmount,
+  type NotionalOrder
+} from "@/lib/alpacaBroker";
+
+type Weight = { 
+  symbol: string; 
+  weight: number; // 0-100 percentage
+};
+
+type RequestBody = {
+  weights: Weight[];
+  totalInvestment?: number; // Optional, defaults to 10000
+};
+
+// Helper to batch arrays
+function toBatches<T>(arr: T[], size: number): T[][] {
+  const batches: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    batches.push(arr.slice(i, i + size));
+  }
+  return batches;
+}
+
+// Store Alpaca account ID for user (calls your backend)
+async function storeAlpacaAccountForUser(userId: string, alpacaAccountId: string): Promise<void> {
+  try {
+    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+    const API_KEY = process.env.API_KEY || '';
+    
+    await fetch(`${BACKEND_URL}/api/v1/users/${userId}/alpaca-account`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY
+      },
+      body: JSON.stringify({ alpaca_account_id: alpacaAccountId })
+    });
+  } catch (error) {
+    console.error('Failed to store Alpaca account in backend:', error);
+    // Non-critical, continue execution
+  }
+}
+
+// Get or create Alpaca account for user
+async function ensureAlpacaAccount(
+  userId: string, 
+  email: string, 
+  givenName: string, 
+  familyName: string
+): Promise<string> {
+  // Check if user already has an Alpaca account (from your backend or local storage)
+  // For MVP, we'll create a new account each time
+  // In production, you'd check your database first
+  
+  try {
+    // Create new paper account
+    const account = await createPaperAccount({
+      contact: {
+        email_address: email,
+        given_name: givenName,
+        family_name: familyName,
+      },
+      identity: {
+        given_name: givenName,
+        family_name: familyName,
+        date_of_birth: "1990-01-01", // You should collect this properly
+        country_of_citizenship: "USA",
+        country_of_tax_residence: "USA",
+      },
+      disclosures: {
+        is_control_person: false,
+        is_affiliated_exchange_or_finra: false,
+        is_politically_exposed: false,
+        immediate_family_exposed: false,
+      },
+      agreements: [
+        {
+          agreement: "customer_agreement",
+          signed_at: new Date().toISOString(),
+          ip_address: "127.0.0.1"
+        },
+        {
+          agreement: "crypto_agreement", 
+          signed_at: new Date().toISOString(),
+          ip_address: "127.0.0.1"
+        }
+      ]
+    });
+
+    // Store the account ID for future use
+    await storeAlpacaAccountForUser(userId, account.id);
+    
+    return account.id;
+  } catch (error: any) {
+    console.error('Failed to create Alpaca account:', error?.response?.data || error);
+    throw new Error('Failed to create trading account');
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    // 1. Authenticate user
+    const { getUser, isAuthenticated } = getKindeServerSession();
+    
+    if (!(await isAuthenticated())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    const user = await getUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // 2. Parse request body
+    const body: RequestBody = await req.json();
+    const { weights, totalInvestment = 10000 } = body;
+    
+    if (!weights || weights.length === 0) {
+      return NextResponse.json({ error: "No portfolio weights provided" }, { status: 400 });
+    }
+
+    // Validate weights sum to ~100%
+    const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
+    if (Math.abs(totalWeight - 100) > 1) {
+      return NextResponse.json({ 
+        error: `Weights must sum to 100%, got ${totalWeight}%` 
+      }, { status: 400 });
+    }
+
+    // 3. Ensure user has an Alpaca account
+    const accountId = await ensureAlpacaAccount(
+      user.id,
+      user.email || `${user.id}@example.com`,
+      user.given_name || "John",
+      user.family_name || "Doe"
+    );
+
+    // 4. Fund the account (journal from firm account)
+    const firmAccountId = process.env.ALPACA_FIRM_ACCOUNT_ID!;
+    
+    try {
+      await createJournalUSD(firmAccountId, accountId, totalInvestment);
+      console.log(`Funded account ${accountId} with $${totalInvestment}`);
+    } catch (error: any) {
+      // Journaling might fail if already funded or insufficient firm balance
+      console.warn('Journal failed (may already be funded):', error?.response?.data || error.message);
+    }
+
+    // 5. Get current prices for the symbols
+    const symbols = weights.map(w => w.symbol);
+    const prices = await getLatestTrades(symbols);
+
+    // 6. Build notional orders
+    const MIN_NOTIONAL = 1.00; // Alpaca minimum for fractional shares
+    const orders: NotionalOrder[] = [];
+    
+    for (const weight of weights) {
+      const targetAmount = calculateNotionalAmount(totalInvestment, weight.weight);
+      
+      if (targetAmount < MIN_NOTIONAL) {
+        console.log(`Skipping ${weight.symbol}: $${targetAmount} below minimum`);
+        continue;
+      }
+      
+      orders.push({
+        symbol: weight.symbol,
+        side: "buy",
+        notional: targetAmount,
+        time_in_force: "day",
+        client_order_id: generateClientOrderId(user.id, weight.symbol),
+        type: "market"
+      });
+    }
+
+    // 7. Submit orders in batches
+    const batches = toBatches(orders, 10); // Submit 10 at a time
+    const submittedOrders: any[] = [];
+    const failedOrders: any[] = [];
+    
+    for (const batch of batches) {
+      await Promise.all(
+        batch.map(async (order) => {
+          try {
+            const result = await placeOrder(accountId, order);
+            submittedOrders.push({
+              symbol: order.symbol,
+              notional: order.notional,
+              orderId: result.id,
+              status: result.status
+            });
+            console.log(`Order placed: ${order.symbol} for $${order.notional}`);
+          } catch (error: any) {
+            console.error(`Order failed for ${order.symbol}:`, error?.response?.data || error.message);
+            failedOrders.push({
+              symbol: order.symbol,
+              notional: order.notional,
+              error: error?.response?.data?.message || error.message
+            });
+          }
+        })
+      );
+      
+      // Small delay between batches to respect rate limits
+      if (batches.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    // 8. Return summary
+    return NextResponse.json({
+      success: true,
+      accountId,
+      summary: {
+        totalInvestment,
+        ordersSubmitted: submittedOrders.length,
+        ordersFailed: failedOrders.length,
+        submittedOrders,
+        failedOrders
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('Portfolio approval error:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Failed to execute portfolio' 
+    }, { status: 500 });
+  }
+}
