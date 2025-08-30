@@ -52,6 +52,7 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
       const response = await fetch('/api/portfolio/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           weights,
           totalInvestment: 10000 // Default paper trading amount

@@ -111,11 +111,17 @@ export async function POST(req: NextRequest) {
     // 1. Authenticate user
     const { getUser, isAuthenticated } = getKindeServerSession();
     
-    if (!(await isAuthenticated())) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const isAuth = await isAuthenticated();
+    console.log('Auth check:', { isAuthenticated: isAuth });
+    
+    if (!isAuth) {
+      console.log('Authentication failed - no valid session');
+      return NextResponse.json({ error: "Unauthorized - Please log in again" }, { status: 401 });
     }
     
     const user = await getUser();
+    console.log('User:', { id: user?.id, email: user?.email });
+    
     if (!user?.id) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -134,6 +140,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ 
         error: `Weights must sum to 100%, got ${totalWeight}%` 
       }, { status: 400 });
+    }
+
+    // Check Alpaca configuration
+    if (!process.env.ALPACA_API_KEY_ID || !process.env.ALPACA_API_SECRET || !process.env.ALPACA_FIRM_ACCOUNT_ID) {
+      console.error('Missing Alpaca configuration:', {
+        hasKey: !!process.env.ALPACA_API_KEY_ID,
+        hasSecret: !!process.env.ALPACA_API_SECRET,
+        hasFirmAccount: !!process.env.ALPACA_FIRM_ACCOUNT_ID
+      });
+      return NextResponse.json({ 
+        error: "Alpaca not configured properly. Please check environment variables." 
+      }, { status: 500 });
     }
 
     // 3. Ensure user has an Alpaca account
