@@ -33,6 +33,21 @@ function toBatches<T>(arr: T[], size: number): T[][] {
   return batches;
 }
 
+// Generate a unique, valid-format test SSN for sandbox based on user ID
+function generateTestSSN(userId: string): string {
+  // Use 666 prefix (reserved for testing) + hash user ID to 6 digits
+  const hash = userId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a; // Convert to 32-bit integer
+  }, 0);
+  
+  // Ensure we get a positive 6-digit number
+  const sixDigits = Math.abs(hash % 1000000).toString().padStart(6, '0');
+  
+  // Format as XXX-XX-XXXX (but return without dashes for API)
+  return `666${sixDigits.slice(0, 2)}${sixDigits.slice(2, 6)}`;
+}
+
 // Store Alpaca account ID for user (calls your backend)
 async function storeAlpacaAccountForUser(userId: string, alpacaAccountId: string): Promise<void> {
   try {
@@ -82,7 +97,7 @@ async function ensureAlpacaAccount(
         given_name: givenName,
         family_name: familyName,
         date_of_birth: "1990-01-01", // You should collect this properly
-        tax_id: "123456789", // Dummy SSN for sandbox testing
+        tax_id: generateTestSSN(userId), // Generate unique test SSN based on user ID
         tax_id_type: "USA_SSN",
         country_of_citizenship: "USA",
         country_of_tax_residence: "USA",
