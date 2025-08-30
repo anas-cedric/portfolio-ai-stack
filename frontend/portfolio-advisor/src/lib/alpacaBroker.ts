@@ -33,6 +33,11 @@ export type CreateAccountReq = {
     given_name: string;
     family_name: string;
     phone_number?: string;
+    street_address?: string[];
+    city?: string;
+    state?: string;
+    postal_code?: string;
+    country?: string;
   };
   identity: {
     given_name?: string;
@@ -42,6 +47,7 @@ export type CreateAccountReq = {
     tax_id_type?: "USA_SSN" | "USA_EIN";
     country_of_citizenship?: string;
     country_of_tax_residence?: string;
+    funding_source?: string[];
   };
   disclosures?: { 
     is_control_person?: boolean; 

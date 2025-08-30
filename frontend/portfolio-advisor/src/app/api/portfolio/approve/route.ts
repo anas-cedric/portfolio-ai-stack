@@ -71,6 +71,12 @@ async function ensureAlpacaAccount(
         email_address: email,
         given_name: givenName,
         family_name: familyName,
+        phone_number: "555-555-0100",
+        street_address: ["123 Main Street"],
+        city: "New York",
+        state: "NY",
+        postal_code: "10001",
+        country: "USA"
       },
       identity: {
         given_name: givenName,
@@ -80,6 +86,7 @@ async function ensureAlpacaAccount(
         tax_id_type: "USA_SSN",
         country_of_citizenship: "USA",
         country_of_tax_residence: "USA",
+        funding_source: ["employment_income"]
       },
       disclosures: {
         is_control_person: false,
