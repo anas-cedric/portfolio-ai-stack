@@ -97,9 +97,9 @@ async function ensureAlpacaAccount(
         family_name: familyName,
         phone_number: "555-555-0100",
         street_address: ["123 Main Street"],
-        city: "New York",
-        state: "NY",
-        postal_code: "10001",
+        city: "Los Angeles", 
+        state: "CA",
+        postal_code: "90210",
         country: "USA"
       },
       identity: {
