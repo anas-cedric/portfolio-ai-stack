@@ -35,17 +35,26 @@ function toBatches<T>(arr: T[], size: number): T[][] {
 
 // Generate a unique, valid-format test SSN for sandbox based on user ID
 function generateTestSSN(userId: string): string {
-  // Use 666 prefix (reserved for testing) + hash user ID to 6 digits
+  // Use 900-999 range (often used for testing) + hash user ID to 6 digits
   const hash = userId.split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a; // Convert to 32-bit integer
   }, 0);
   
-  // Ensure we get a positive 6-digit number
+  // Generate area number 900-999 from user hash
+  const area = 900 + (Math.abs(hash) % 100); // 900-999
+  
+  // Ensure we get a positive 6-digit number for group+serial
   const sixDigits = Math.abs(hash % 1000000).toString().padStart(6, '0');
   
-  // Format as XXX-XX-XXXX (but return without dashes for API)
-  return `666${sixDigits.slice(0, 2)}${sixDigits.slice(2, 6)}`;
+  // Ensure group is not 00
+  const group = sixDigits.slice(0, 2) === '00' ? '01' : sixDigits.slice(0, 2);
+  
+  // Ensure serial is not 0000
+  const serial = sixDigits.slice(2, 6) === '0000' ? '0001' : sixDigits.slice(2, 6);
+  
+  // Format as XXXGGSSSS (area + group + serial, no dashes for API)
+  return `${area}${group}${serial}`;
 }
 
 // Store Alpaca account ID for user (calls your backend)
