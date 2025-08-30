@@ -38,7 +38,12 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
   const { user } = useKindeBrowserClient();
   
   const handleApproveClick = async () => {
-    if (!onApprove || !user) return;
+    console.log('Approve button clicked', { hasOnApprove: !!onApprove, hasUser: !!user, user });
+    
+    if (!onApprove || !user) {
+      console.log('Stopping execution - missing onApprove or user');
+      return;
+    }
     
     setIsExecuting(true);
     setExecutionStatus('Executing portfolio...');
@@ -51,6 +56,8 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
       }));
       
       // Call the Alpaca execution API with user info
+      console.log('Making API call with weights:', weights);
+      
       const response = await fetch('/api/portfolio/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,7 +71,9 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
         })
       });
       
+      console.log('API response status:', response.status);
       const result = await response.json();
+      console.log('API response body:', result);
       
       if (!response.ok) {
         throw new Error(result.error || 'Failed to execute portfolio');

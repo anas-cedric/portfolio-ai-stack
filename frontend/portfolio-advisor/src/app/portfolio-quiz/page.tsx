@@ -371,6 +371,7 @@ function PortfolioQuizContent() {
             age: userAge, 
             riskAnswers: userAnswers 
           }}
+          onApprove={handleProceedToOnboarding}
           onProceedToOnboarding={handleProceedToOnboarding}
         />
       )}

@@ -257,7 +257,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
         </div>
 
         {/* Right section - Black section with chart */}
-        <AllocationSidebar portfolioData={actualPortfolioData} onApprove={onProceedToOnboarding} />
+        <AllocationSidebar portfolioData={actualPortfolioData} onApprove={onApprove} />
       </div>
     </TooltipProvider>
   );
