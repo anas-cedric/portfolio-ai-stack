@@ -76,6 +76,8 @@ async function ensureAlpacaAccount(
         given_name: givenName,
         family_name: familyName,
         date_of_birth: "1990-01-01", // You should collect this properly
+        tax_id: "123456789", // Dummy SSN for sandbox testing
+        tax_id_type: "USA_SSN",
         country_of_citizenship: "USA",
         country_of_tax_residence: "USA",
       },
