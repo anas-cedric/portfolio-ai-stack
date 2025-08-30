@@ -7,9 +7,11 @@ const secret = process.env.ALPACA_API_SECRET!;
 export const alpaca = axios.create({
   baseURL,
   timeout: 15000,
+  auth: {
+    username: key,
+    password: secret
+  },
   headers: {
-    "APCA-API-KEY-ID": key,
-    "APCA-API-SECRET-KEY": secret,
     "Content-Type": "application/json"
   }
 });
