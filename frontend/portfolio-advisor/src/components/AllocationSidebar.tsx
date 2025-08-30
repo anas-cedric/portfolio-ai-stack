@@ -5,6 +5,7 @@ import { PortfolioData } from '@/lib/types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import PortfolioDonutChart from './PortfolioDonutChart';
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 
 interface AllocationSidebarProps {
   portfolioData: PortfolioData;
@@ -34,9 +35,10 @@ const ETF_SECTORS: Record<string, { sector: string; color: string }> = {
 export default function AllocationSidebar({ portfolioData, onApprove }: AllocationSidebarProps) {
   const [isExecuting, setIsExecuting] = React.useState(false);
   const [executionStatus, setExecutionStatus] = React.useState<string | null>(null);
+  const { user } = useKindeBrowserClient();
   
   const handleApproveClick = async () => {
-    if (!onApprove) return;
+    if (!onApprove || !user) return;
     
     setIsExecuting(true);
     setExecutionStatus('Executing portfolio...');
@@ -48,14 +50,17 @@ export default function AllocationSidebar({ portfolioData, onApprove }: Allocati
         weight: holding.percentage
       }));
       
-      // Call the Alpaca execution API
+      // Call the Alpaca execution API with user info
       const response = await fetch('/api/portfolio/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           weights,
-          totalInvestment: 10000 // Default paper trading amount
+          totalInvestment: 10000,
+          userId: user.id,
+          userEmail: user.email || `${user.id}@example.com`,
+          userFirstName: user.given_name || 'User',
+          userLastName: user.family_name || 'Account'
         })
       });
       

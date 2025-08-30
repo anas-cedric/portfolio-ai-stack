@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { 
   createPaperAccount, 
   getAccount, 
@@ -19,6 +18,10 @@ type Weight = {
 type RequestBody = {
   weights: Weight[];
   totalInvestment?: number; // Optional, defaults to 10000
+  userId: string; // Pass from client
+  userEmail: string;
+  userFirstName?: string;
+  userLastName?: string;
 };
 
 // Helper to batch arrays
@@ -108,27 +111,25 @@ async function ensureAlpacaAccount(
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Authenticate user
-    const { getUser, isAuthenticated } = getKindeServerSession();
-    
-    const isAuth = await isAuthenticated();
-    console.log('Auth check:', { isAuthenticated: isAuth });
-    
-    if (!isAuth) {
-      console.log('Authentication failed - no valid session');
-      return NextResponse.json({ error: "Unauthorized - Please log in again" }, { status: 401 });
-    }
-    
-    const user = await getUser();
-    console.log('User:', { id: user?.id, email: user?.email });
-    
-    if (!user?.id) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // 2. Parse request body
+    // Parse request body (user info passed from authenticated client)
     const body: RequestBody = await req.json();
-    const { weights, totalInvestment = 10000 } = body;
+    const { 
+      weights, 
+      totalInvestment = 10000,
+      userId,
+      userEmail,
+      userFirstName = "User",
+      userLastName = "Account"
+    } = body;
+    
+    // Basic validation
+    if (!userId || !userEmail) {
+      return NextResponse.json({ 
+        error: "Missing user information" 
+      }, { status: 400 });
+    }
+    
+    console.log('Processing portfolio for user:', { userId, userEmail });
     
     if (!weights || weights.length === 0) {
       return NextResponse.json({ error: "No portfolio weights provided" }, { status: 400 });
@@ -156,10 +157,10 @@ export async function POST(req: NextRequest) {
 
     // 3. Ensure user has an Alpaca account
     const accountId = await ensureAlpacaAccount(
-      user.id,
-      user.email || `${user.id}@example.com`,
-      user.given_name || "John",
-      user.family_name || "Doe"
+      userId,
+      userEmail,
+      userFirstName,
+      userLastName
     );
 
     // 4. Fund the account (journal from firm account)
@@ -194,7 +195,7 @@ export async function POST(req: NextRequest) {
         side: "buy",
         notional: targetAmount,
         time_in_force: "day",
-        client_order_id: generateClientOrderId(user.id, weight.symbol),
+        client_order_id: generateClientOrderId(userId, weight.symbol),
         type: "market"
       });
     }
