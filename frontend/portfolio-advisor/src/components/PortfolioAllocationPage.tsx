@@ -23,6 +23,7 @@ interface PortfolioAllocationPageProps {
   onPortfolioUpdate?: (updated: PortfolioResponse) => void;
   onStartOver?: () => void;
   onProceedToOnboarding?: () => void;
+  user?: any; // Kinde user object
 }
 
 const InfoIcon = () => (
@@ -65,7 +66,7 @@ const ETF_DESCRIPTIONS: Record<string, string> = {
   'CASH': 'Cash and cash equivalents provide liquidity and stability with minimal risk.'
 };
 
-const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver, onProceedToOnboarding }) => {
+const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portfolioData, onApprove, userPreferences, onPortfolioUpdate, onStartOver, onProceedToOnboarding, user }) => {
   const [showScrollTop, setShowScrollTop] = React.useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   
@@ -257,7 +258,7 @@ const PortfolioAllocationPage: React.FC<PortfolioAllocationPageProps> = ({ portf
         </div>
 
         {/* Right section - Black section with chart */}
-        <AllocationSidebar portfolioData={actualPortfolioData} onApprove={onApprove} />
+        <AllocationSidebar portfolioData={actualPortfolioData} onApprove={onApprove} user={user} />
       </div>
     </TooltipProvider>
   );

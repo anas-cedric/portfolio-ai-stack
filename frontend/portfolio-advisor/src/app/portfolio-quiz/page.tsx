@@ -373,6 +373,7 @@ function PortfolioQuizContent() {
           }}
           onApprove={handleProceedToOnboarding}
           onProceedToOnboarding={handleProceedToOnboarding}
+          user={user}
         />
       )}
     </div>

@@ -5,11 +5,10 @@ import { PortfolioData } from '@/lib/types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import PortfolioDonutChart from './PortfolioDonutChart';
-import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-
 interface AllocationSidebarProps {
   portfolioData: PortfolioData;
   onApprove?: () => void;
+  user?: any; // Kinde user object
 }
 
 // Define sector mappings for ETFs
@@ -32,10 +31,9 @@ const ETF_SECTORS: Record<string, { sector: string; color: string }> = {
   'CASH': { sector: 'Cash & Equivalents', color: '#94A3B8' }
 };
 
-export default function AllocationSidebar({ portfolioData, onApprove }: AllocationSidebarProps) {
+export default function AllocationSidebar({ portfolioData, onApprove, user }: AllocationSidebarProps) {
   const [isExecuting, setIsExecuting] = React.useState(false);
   const [executionStatus, setExecutionStatus] = React.useState<string | null>(null);
-  const { user } = useKindeBrowserClient();
   
   const handleApproveClick = async () => {
     console.log('Approve button clicked', { hasOnApprove: !!onApprove, hasUser: !!user, user });
