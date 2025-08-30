@@ -104,8 +104,17 @@ async function ensureAlpacaAccount(
     
     return account.id;
   } catch (error: any) {
-    console.error('Failed to create Alpaca account:', error?.response?.data || error);
-    throw new Error('Failed to create trading account');
+    console.error('Failed to create Alpaca account - Full error:', {
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+      data: error?.response?.data,
+      message: error?.message,
+      url: error?.config?.url
+    });
+    
+    // Return more specific error message
+    const alpacaError = error?.response?.data?.message || error?.message || 'Unknown Alpaca error';
+    throw new Error(`Alpaca account creation failed: ${alpacaError}`);
   }
 }
 
@@ -135,11 +144,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No portfolio weights provided" }, { status: 400 });
     }
 
-    // Validate weights sum to ~100%
+    // Validate weights sum to ~100% (allow 2% tolerance for floating point precision)
     const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
-    if (Math.abs(totalWeight - 100) > 1) {
+    if (Math.abs(totalWeight - 100) > 2) {
       return NextResponse.json({ 
-        error: `Weights must sum to 100%, got ${totalWeight}%` 
+        error: `Weights must sum to approximately 100%, got ${totalWeight}%` 
       }, { status: 400 });
     }
 
