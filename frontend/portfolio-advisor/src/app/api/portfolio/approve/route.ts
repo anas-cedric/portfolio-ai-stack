@@ -58,6 +58,22 @@ function generateTestSSN(userId: string): string {
   return `${area}${group}${serial}`;
 }
 
+// Generate a unique test email for sandbox to avoid "email already exists" errors
+function generateTestEmail(userId: string): string {
+  // Create a hash of the user ID + current timestamp to ensure uniqueness
+  const timestamp = Date.now();
+  const hash = userId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  // Generate unique identifier
+  const uniqueId = Math.abs(hash + timestamp).toString(36);
+  
+  // Return test email
+  return `test+${uniqueId}@cedric-sandbox.com`;
+}
+
 // Note: We now store Alpaca account IDs in Supabase via activity logging
 // No separate storage function needed as we log the account creation
 
@@ -73,10 +89,11 @@ async function ensureAlpacaAccount(
   // In production, you'd check your database first
   
   try {
-    // Create new paper account
+    // Create new paper account with generated test email to avoid conflicts
+    const testEmail = generateTestEmail(userId);
     const account = await createPaperAccount({
       contact: {
-        email_address: email,
+        email_address: testEmail,
         given_name: givenName,
         family_name: familyName,
         phone_number: "555-555-0100",
@@ -192,7 +209,12 @@ export async function POST(req: NextRequest) {
       'info',
       'Cedric created your $10,000 simulated portfolio',
       `Your paper trading account has been funded and is ready for trading. Account ID: ${accountId}`,
-      { alpaca_account_id: accountId, total_investment: totalInvestment },
+      { 
+        alpaca_account_id: accountId, 
+        total_investment: totalInvestment,
+        test_email: testEmail,
+        user_email: userEmail
+      },
       accountId
     );
 
