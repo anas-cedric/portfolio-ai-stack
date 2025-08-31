@@ -143,7 +143,7 @@ export default function OnboardingPage() {
         
         // Auto-redirect to dashboard after 3 seconds
         setTimeout(() => {
-          router.push('/dashboard');
+          router.push('/dashboard?from=approval');
         }, 3000);
       }
     } catch (err) {
@@ -272,7 +272,7 @@ export default function OnboardingPage() {
               )}
             </div>
             <Button 
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/dashboard?from=approval')}
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl"
             >
               Go to Dashboard

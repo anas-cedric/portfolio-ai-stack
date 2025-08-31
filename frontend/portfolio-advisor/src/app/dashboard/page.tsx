@@ -86,8 +86,8 @@ export default function DashboardPage() {
   useEffect(() => {
     if (portfolioState && portfolioState.status !== 'ACTIVE' && !portfolioState.hasExecutedTrades) {
       const timer = setTimeout(() => {
-        fetchDashboardData();
-      }, 30000); // Refresh every 30 seconds
+        checkAccountStatus(); // Check status first, then refresh data
+      }, 15000); // Check every 15 seconds for faster updates
       setRefreshTimer(timer);
     } else if (refreshTimer) {
       clearTimeout(refreshTimer);
@@ -100,6 +100,36 @@ export default function DashboardPage() {
       }
     };
   }, [portfolioState, refreshTimer]);
+
+  // Check account status and update activities if changed
+  const checkAccountStatus = async () => {
+    try {
+      const response = await fetch('/api/portfolio/status/check', {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const statusData = await response.json();
+        console.log('Status check result:', statusData);
+        
+        // If status changed, refresh dashboard data to get new activities
+        if (statusData.statusChanged) {
+          console.log(`Status changed to ${statusData.currentStatus}, refreshing dashboard`);
+          await fetchDashboardData();
+        } else {
+          // If no status change but still checking, just refresh activities
+          await fetchDashboardData();
+        }
+      } else {
+        console.warn('Status check failed, falling back to regular refresh');
+        await fetchDashboardData();
+      }
+    } catch (error) {
+      console.error('Status check error:', error);
+      // Fallback to regular refresh on error
+      await fetchDashboardData();
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -135,11 +165,29 @@ export default function DashboardPage() {
         });
       }
 
-      // If user has no activities, they probably haven't completed portfolio approval yet
+      // Check if we have activities or if this might be a fresh approval
+      // Don't redirect immediately - could be Supabase not configured or timing issue
       if (activitiesData.activities && activitiesData.activities.length === 0) {
-        console.log('No activities found, redirecting to portfolio quiz');
-        router.push('/portfolio-quiz');
-        return;
+        // Check if user just came from portfolio approval by looking for referrer or URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromApproval = urlParams.get('from') === 'approval' || document.referrer.includes('/portfolio-quiz');
+        
+        if (!fromApproval) {
+          console.log('No activities found and not from approval, redirecting to portfolio quiz');
+          // Only redirect after a delay to avoid immediate bounce
+          setTimeout(() => {
+            router.push('/portfolio-quiz');
+          }, 2000);
+          return;
+        } else {
+          console.log('No activities but user came from approval - showing setup state');
+          // Set a default portfolio state for fresh approvals
+          setPortfolioState({
+            status: 'SUBMITTED',
+            totalInvestment: 10000,
+            hasExecutedTrades: false
+          });
+        }
       }
 
       // Check if account is ACTIVE but trades not executed yet
