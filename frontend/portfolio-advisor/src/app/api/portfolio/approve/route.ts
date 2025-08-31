@@ -83,7 +83,7 @@ async function ensureAlpacaAccount(
   email: string, 
   givenName: string, 
   familyName: string
-): Promise<{ accountId: string; testEmail: string }> {
+): Promise<{ accountId: string; testEmail: string; initialStatus: string }> {
   // Check if user already has an Alpaca account (from your backend or local storage)
   // For MVP, we'll create a new account each time
   // In production, you'd check your database first
@@ -133,31 +133,13 @@ async function ensureAlpacaAccount(
       ]
     });
 
-    // Wait for account to be approved (sandbox should be instant, but sometimes needs a moment)
-    let accountStatus = account.status;
-    let retries = 0;
-    const maxRetries = 10;
+    console.log(`Account created: ${account.id}, status: ${account.status}`);
     
-    while (accountStatus !== 'APPROVED' && retries < maxRetries) {
-      console.log(`Account status: ${accountStatus}, waiting for approval... (attempt ${retries + 1}/${maxRetries})`);
-      
-      // Wait 1 second before checking again
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check account status
-      const updatedAccount = await getAccount(account.id);
-      accountStatus = updatedAccount.status;
-      retries++;
-    }
-    
-    if (accountStatus !== 'APPROVED') {
-      console.warn(`Account ${account.id} not approved after ${maxRetries} attempts. Status: ${accountStatus}`);
-      // Continue anyway - the account exists even if not fully approved
-    } else {
-      console.log(`Account ${account.id} approved successfully`);
-    }
-    
-    return { accountId: account.id, testEmail };
+    return { 
+      accountId: account.id, 
+      testEmail,
+      initialStatus: account.status 
+    };
   } catch (error: any) {
     console.error('Failed to create Alpaca account - Full error:', {
       status: error?.response?.status,
@@ -220,140 +202,53 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Ensure user has an Alpaca account
-    const { accountId, testEmail } = await ensureAlpacaAccount(
+    const { accountId, testEmail, initialStatus } = await ensureAlpacaAccount(
       userId,
       userEmail,
       userFirstName,
       userLastName
     );
 
-    // Log account creation activity
+    // Log account creation activity - account is being prepared
     await logActivity(
       userId,
       'info',
-      'Cedric created your $10,000 simulated portfolio',
-      `Your paper trading account has been funded and is ready for trading. Account ID: ${accountId}`,
+      'Cedric is preparing your $10,000 simulated portfolio',
+      `Your paper trading account is being set up. Account will be funded and trades executed once ready. Account ID: ${accountId}`,
       { 
         alpaca_account_id: accountId, 
         total_investment: totalInvestment,
         test_email: testEmail,
-        user_email: userEmail
+        user_email: userEmail,
+        initial_status: initialStatus,
+        target_weights: weights
       },
       accountId
     );
 
-    // 4. Fund the account (journal from firm account)
-    const firmAccountId = process.env.ALPACA_FIRM_ACCOUNT_ID!;
-    
-    try {
-      await createJournalUSD(firmAccountId, accountId, totalInvestment);
-      console.log(`Funded account ${accountId} with $${totalInvestment}`);
-    } catch (error: any) {
-      // Journaling might fail if already funded or insufficient firm balance
-      console.warn('Journal failed (may already be funded):', error?.response?.data || error.message);
-    }
-
-    // 5. Get current prices for the symbols
-    const symbols = weights.map(w => w.symbol);
-    const prices = await getLatestTrades(symbols);
-
-    // 6. Build notional orders
-    const MIN_NOTIONAL = 1.00; // Alpaca minimum for fractional shares
-    const orders: NotionalOrder[] = [];
-    
-    for (const weight of weights) {
-      const targetAmount = calculateNotionalAmount(totalInvestment, weight.weight);
-      
-      if (targetAmount < MIN_NOTIONAL) {
-        console.log(`Skipping ${weight.symbol}: $${targetAmount} below minimum`);
-        continue;
-      }
-      
-      orders.push({
-        symbol: weight.symbol,
-        side: "buy",
-        notional: targetAmount,
-        time_in_force: "day",
-        client_order_id: generateClientOrderId(userId, weight.symbol),
-        type: "market"
-      });
-    }
-
-    // 7. Submit orders in batches
-    const batches = toBatches(orders, 10); // Submit 10 at a time
-    const submittedOrders: any[] = [];
-    const failedOrders: any[] = [];
-    
-    for (const batch of batches) {
-      await Promise.all(
-        batch.map(async (order) => {
-          try {
-            const result = await placeOrder(accountId, order);
-            
-            // Log successful order
-            await logOrderSubmission(userId, accountId, order.client_order_id || `order-${Date.now()}-${order.symbol}`, {
-              order: order,
-              result: result,
-              status: 'submitted'
-            });
-            
-            submittedOrders.push({
-              symbol: order.symbol,
-              notional: order.notional,
-              orderId: result.id,
-              status: result.status
-            });
-            console.log(`Order placed: ${order.symbol} for $${order.notional}`);
-          } catch (error: any) {
-            console.error(`Order failed for ${order.symbol}:`, error?.response?.data || error.message);
-            
-            // Log failed order
-            await logOrderSubmission(userId, accountId, order.client_order_id || `order-${Date.now()}-${order.symbol}`, {
-              order: order,
-              error: error?.response?.data || error.message,
-              status: 'failed'
-            });
-            
-            failedOrders.push({
-              symbol: order.symbol,
-              notional: order.notional,
-              error: error?.response?.data?.message || error.message
-            });
-          }
-        })
-      );
-      
-      // Small delay between batches to respect rate limits
-      if (batches.length > 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-
-    // 8. Log order execution summary
+    // Store portfolio weights for later execution when account is ready
     await logActivity(
       userId,
-      'trade_executed',
-      `Portfolio execution completed`,
-      `Successfully submitted ${submittedOrders.length} orders, ${failedOrders.length} failed. Total investment: $${totalInvestment}`,
+      'info',
+      'Portfolio strategy saved',
+      'Your investment strategy has been saved and will be executed once your account is ready.',
       {
-        orders_submitted: submittedOrders.length,
-        orders_failed: failedOrders.length,
-        submitted_orders: submittedOrders,
-        failed_orders: failedOrders
+        weights: weights,
+        total_investment: totalInvestment,
+        pending_execution: true
       },
       accountId
     );
 
-    // 9. Return summary
+    // Return immediately - dashboard will handle the funding and execution process
     return NextResponse.json({
       success: true,
       accountId,
-      summary: {
+      initialStatus,
+      message: "Account created successfully. Portfolio execution will begin once account is ready.",
+      portfolio: {
         totalInvestment,
-        ordersSubmitted: submittedOrders.length,
-        ordersFailed: failedOrders.length,
-        submittedOrders,
-        failedOrders
+        weights
       }
     });
     

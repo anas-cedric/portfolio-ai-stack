@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, MessageCircle, TrendingUp, DollarSign } from 'lucide-react';
+import { Loader2, MessageCircle, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -16,6 +16,16 @@ type Activity = {
   body?: string;
   timestamp: string;
   meta?: any;
+};
+
+type AccountStatus = 'SUBMITTED' | 'APPROVED' | 'ACTIVE' | 'ACCOUNT_UPDATED';
+
+type PortfolioState = {
+  status: AccountStatus;
+  accountId?: string;
+  totalInvestment: number;
+  weights?: Array<{ symbol: string; weight: number }>;
+  hasExecutedTrades?: boolean;
 };
 
 type Proposal = {
@@ -53,8 +63,10 @@ export default function DashboardPage() {
   const { user, isLoading: isAuthLoading } = useKindeBrowserClient();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [portfolioState, setPortfolioState] = useState<PortfolioState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -69,6 +81,25 @@ export default function DashboardPage() {
       fetchDashboardData();
     }
   }, [user]);
+
+  // Auto-refresh when account is not ACTIVE yet
+  useEffect(() => {
+    if (portfolioState && portfolioState.status !== 'ACTIVE' && !portfolioState.hasExecutedTrades) {
+      const timer = setTimeout(() => {
+        fetchDashboardData();
+      }, 30000); // Refresh every 30 seconds
+      setRefreshTimer(timer);
+    } else if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      setRefreshTimer(null);
+    }
+
+    return () => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
+    };
+  }, [portfolioState, refreshTimer]);
 
   const fetchDashboardData = async () => {
     try {
@@ -91,6 +122,19 @@ export default function DashboardPage() {
       setActivities(activitiesData.activities || []);
       setProposals(proposalsData.proposals || []);
 
+      // Extract portfolio state from latest activities
+      const latestActivity = activitiesData.activities?.[0];
+      if (latestActivity?.meta) {
+        const meta = latestActivity.meta;
+        setPortfolioState({
+          status: meta.account_status || meta.initial_status || 'SUBMITTED',
+          accountId: meta.alpaca_account_id,
+          totalInvestment: meta.total_investment || 10000,
+          weights: meta.target_weights || meta.weights,
+          hasExecutedTrades: meta.trades_executed || false
+        });
+      }
+
       // If user has no activities, they probably haven't completed portfolio approval yet
       if (activitiesData.activities && activitiesData.activities.length === 0) {
         console.log('No activities found, redirecting to portfolio quiz');
@@ -98,11 +142,42 @@ export default function DashboardPage() {
         return;
       }
 
+      // Check if account is ACTIVE but trades not executed yet
+      if (portfolioState && portfolioState.status === 'ACTIVE' && !portfolioState.hasExecutedTrades) {
+        executePortfolioTrades();
+      }
+
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error);
       setError(error.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const executePortfolioTrades = async () => {
+    if (!portfolioState?.accountId || !portfolioState?.weights) {
+      console.warn('Cannot execute trades: missing account ID or weights');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/portfolio/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId: portfolioState.accountId,
+          weights: portfolioState.weights,
+          totalInvestment: portfolioState.totalInvestment
+        })
+      });
+
+      if (response.ok) {
+        // Refresh to show executed trades
+        await fetchDashboardData();
+      }
+    } catch (error) {
+      console.error('Failed to execute portfolio trades:', error);
     }
   };
 
@@ -189,8 +264,81 @@ export default function DashboardPage() {
                   Portfolio Summary
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-[#00121F] mb-2">$10,000.00</div>
+              <CardContent className="space-y-4">
+                <div className="text-2xl font-semibold text-[#00121F] mb-2">
+                  ${portfolioState?.totalInvestment.toLocaleString() || '10,000'}.00
+                </div>
+                
+                {/* Account Status Indicator */}
+                {portfolioState && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border">
+                    {portfolioState.status === 'SUBMITTED' && (
+                      <>
+                        <Clock className="w-5 h-5 text-blue-500 animate-pulse" />
+                        <div>
+                          <div className="font-medium text-sm">Account Setup in Progress</div>
+                          <div className="text-xs text-[#00121F]/60">
+                            Your paper trading account is being created (usually takes 1-2 minutes)
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {portfolioState.status === 'APPROVED' && (
+                      <>
+                        <Clock className="w-5 h-5 text-orange-500 animate-pulse" />
+                        <div>
+                          <div className="font-medium text-sm">Account Funding in Progress</div>
+                          <div className="text-xs text-[#00121F]/60">
+                            Funding your account and preparing to execute trades (2-4 minutes remaining)
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {portfolioState.status === 'ACTIVE' && !portfolioState.hasExecutedTrades && (
+                      <>
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <div>
+                          <div className="font-medium text-sm">Executing Your Portfolio</div>
+                          <div className="text-xs text-[#00121F]/60">
+                            Account is funded! Placing your investment orders now...
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {portfolioState.hasExecutedTrades && (
+                      <>
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <div>
+                          <div className="font-medium text-sm">Portfolio Active</div>
+                          <div className="text-xs text-[#00121F]/60">
+                            Your investments have been placed and Cedric is monitoring your portfolio
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                
+                {/* Portfolio Weights Preview */}
+                {portfolioState?.weights && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-[#00121F]/80">Target Allocation:</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {portfolioState.weights.slice(0, 6).map((weight) => (
+                        <div key={weight.symbol} className="flex justify-between p-2 bg-slate-50 rounded">
+                          <span className="font-medium">{weight.symbol}</span>
+                          <span>{weight.weight}%</span>
+                        </div>
+                      ))}
+                      {portfolioState.weights.length > 6 && (
+                        <div className="text-[#00121F]/60 text-center col-span-2">
+                          +{portfolioState.weights.length - 6} more holdings
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="text-sm text-[#00121F]/60">
                   Simulated paper trading portfolio • Educational purposes only
                 </div>
