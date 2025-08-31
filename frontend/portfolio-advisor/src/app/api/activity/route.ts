@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { getActivitiesByUser } from "@/lib/supabase";
+
+export async function GET(request: NextRequest) {
+  try {
+    const { getUser, isAuthenticated } = getKindeServerSession();
+    
+    if (!(await isAuthenticated())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await getUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 });
+    }
+
+    // Get optional limit from query params
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    // Fetch activities for this user
+    const activities = await getActivitiesByUser(user.id, limit);
+
+    return NextResponse.json({
+      success: true,
+      activities: activities.map(activity => ({
+        id: activity.id,
+        type: activity.type,
+        title: activity.title,
+        body: activity.body,
+        timestamp: activity.ts,
+        meta: activity.meta
+      }))
+    });
+
+  } catch (error: any) {
+    console.error('Failed to fetch activities:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Failed to fetch activities' 
+    }, { status: 500 });
+  }
+}

@@ -1,171 +1,313 @@
-import { requireAuth, getAuthUser } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Wallet, 
-  TrendingUp, 
-  PieChart, 
-  Settings, 
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
+import { Loader2, MessageCircle, TrendingUp, DollarSign } from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
 
-export default async function Dashboard() {
-  // Require authentication
-  await requireAuth();
-  const user = await getAuthUser();
+type Activity = {
+  id: string;
+  type: 'info' | 'trade_executed' | 'proposal_created' | 'proposal_approved' | 'proposal_rejected' | 'warning';
+  title: string;
+  body?: string;
+  timestamp: string;
+  meta?: any;
+};
 
-  // Check if user has completed onboarding
-  // In a real app, you'd check this from database
-  const hasCompletedOnboarding = false; // TODO: Check from database
+type Proposal = {
+  id: string;
+  rationale: string;
+  plan: any;
+  status: string;
+  createdAt: string;
+  expiresAt?: string;
+};
 
-  if (!hasCompletedOnboarding) {
-    // Redirect to portfolio quiz if not onboarded
-    redirect('/');
+const ActivityIcon = ({ type }: { type: Activity['type'] }) => {
+  const iconClass = "w-4 h-4";
+  
+  switch (type) {
+    case 'info':
+      return <MessageCircle className={iconClass} />;
+    case 'trade_executed':
+      return <TrendingUp className={iconClass} />;
+    case 'proposal_created':
+      return <MessageCircle className={iconClass} />;
+    case 'proposal_approved':
+      return <TrendingUp className={iconClass + " text-green-600"} />;
+    case 'proposal_rejected':
+      return <MessageCircle className={iconClass + " text-red-600"} />;
+    case 'warning':
+      return <MessageCircle className={iconClass + " text-yellow-600"} />;
+    default:
+      return <MessageCircle className={iconClass} />;
+  }
+};
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useKindeBrowserClient();
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      router.push('/api/auth/login');
+    }
+  }, [user, isAuthLoading, router]);
+
+  // Fetch data when user is available
+  useEffect(() => {
+    if (user?.id) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch activities and proposals in parallel
+      const [activitiesRes, proposalsRes] = await Promise.all([
+        fetch('/api/activity'),
+        fetch('/api/cedric/proposals')
+      ]);
+
+      if (!activitiesRes.ok || !proposalsRes.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+
+      const activitiesData = await activitiesRes.json();
+      const proposalsData = await proposalsRes.json();
+
+      setActivities(activitiesData.activities || []);
+      setProposals(proposalsData.proposals || []);
+
+    } catch (error: any) {
+      console.error('Failed to fetch dashboard data:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleProposalAction = async (proposalId: string, action: 'approve' | 'reject') => {
+    try {
+      const response = await fetch(`/api/cedric/proposals/${proposalId}/${action}`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} proposal`);
+      }
+
+      // Refresh data after action
+      await fetchDashboardData();
+
+    } catch (error: any) {
+      console.error(`Failed to ${action} proposal:`, error);
+      setError(error.message);
+    }
+  };
+
+  // Show loading while checking auth
+  if (isAuthLoading || isLoading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-[#E6EFF3]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-700">Loading your portfolio dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (!user) {
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold">Portfolio Dashboard</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Welcome, {user?.given_name || user?.email}
-              </span>
+    <div className="w-full h-screen bg-[#E6EFF3] flex overflow-hidden">
+      {/* Left section - Activity feed and chat */}
+      <div className="flex-1 flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto p-8">
+          <div className="w-full max-w-[800px] mx-auto space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <Image 
+                  src="/images/cedric-logo-new.png" 
+                  alt="Cedric" 
+                  width={60} 
+                  height={60}
+                />
+                <div>
+                  <h1 className="text-2xl font-bold text-[#00121F]">
+                    Welcome back, {user.given_name || user.email}!
+                  </h1>
+                  <p className="text-[#00121F]/60">Cedric is monitoring your portfolio</p>
+                </div>
+              </div>
+              
               <Link href="/api/auth/logout">
-                <Button variant="outline" size="sm">Sign Out</Button>
+                <button className="text-[#00121F]/60 hover:text-[#00121F]/80 text-sm transition-colors">
+                  Sign Out
+                </button>
               </Link>
             </div>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Value</p>
-                  <p className="text-2xl font-bold">$0.00</p>
-                  <p className="text-xs text-green-600 flex items-center mt-1">
-                    <ArrowUpRight className="w-3 h-3 mr-1" />
-                    0.00%
-                  </p>
-                </div>
-                <Wallet className="w-8 h-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
+            {/* Error display */}
+            {error && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="pt-6">
+                  <p className="text-red-600 text-sm">{error}</p>
+                </CardContent>
+              </Card>
+            )}
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Today's Gain</p>
-                  <p className="text-2xl font-bold">$0.00</p>
-                  <p className="text-xs text-gray-500 mt-1">0.00%</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Cash Balance</p>
-                  <p className="text-2xl font-bold">$0.00</p>
-                  <p className="text-xs text-gray-500 mt-1">Available</p>
-                </div>
-                <Wallet className="w-8 h-8 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Return</p>
-                  <p className="text-2xl font-bold">0.00%</p>
-                  <p className="text-xs text-gray-500 mt-1">All Time</p>
-                </div>
-                <PieChart className="w-8 h-8 text-indigo-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Portfolio Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Holdings */}
-          <div className="lg:col-span-2">
+            {/* Portfolio Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Portfolio Holdings</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5" />
+                  Portfolio Summary
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-gray-500">
-                  <PieChart className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p className="font-medium mb-2">No Holdings Yet</p>
-                  <p className="text-sm mb-4">Start by funding your account and creating your portfolio</p>
-                  <Link href="/onboarding">
-                    <Button>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Get Started
-                    </Button>
-                  </Link>
+                <div className="text-2xl font-semibold text-[#00121F] mb-2">$10,000.00</div>
+                <div className="text-sm text-[#00121F]/60">
+                  Simulated paper trading portfolio • Educational purposes only
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Activity Feed */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {activities.length === 0 ? (
+                  <div className="text-center py-8 text-[#00121F]/60">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No activity yet. Approve a portfolio to get started!</p>
+                  </div>
+                ) : (
+                  activities.map((activity) => (
+                    <div key={activity.id} className="border border-[#00121F]/10 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1">
+                          <ActivityIcon type={activity.type} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-[#00121F] mb-1">
+                            {activity.title}
+                          </div>
+                          {activity.body && (
+                            <div className="text-sm text-[#00121F]/70 mb-2">
+                              {activity.body}
+                            </div>
+                          )}
+                          <div className="text-xs text-[#00121F]/50">
+                            {new Date(activity.timestamp).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Chat Interface Placeholder */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Ask Cedric about your portfolio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-[#00121F]/5 rounded-lg p-4 text-center">
+                  <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm text-[#00121F]/60 mb-4">
+                    Chat with Cedric about your investment strategy, market conditions, or portfolio performance.
+                  </p>
+                  <div className="text-xs text-[#00121F]/40">
+                    Coming soon: Real-time portfolio chat
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-
-          {/* Actions */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link href="/fund" className="block">
-                  <Button className="w-full" variant="outline">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Funds
-                  </Button>
-                </Link>
-                <Link href="/trade" className="block">
-                  <Button className="w-full" variant="outline">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Trade
-                  </Button>
-                </Link>
-                <Link href="/portfolio" className="block">
-                  <Button className="w-full" variant="outline">
-                    <PieChart className="w-4 h-4 mr-2" />
-                    View Portfolio
-                  </Button>
-                </Link>
-                <Link href="/settings" className="block">
-                  <Button className="w-full" variant="outline">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
         </div>
-      </main>
+      </div>
+
+      {/* Right section - Proposals */}
+      <div className="w-[400px] bg-[#00090F] text-white p-8 overflow-y-auto">
+        <h2 className="text-xl font-semibold mb-6">Cedric's Proposals</h2>
+        
+        {proposals.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="text-white/60 text-sm">
+              Cedric is watching the markets. When he has suggestions for your portfolio, they'll appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {proposals.map((proposal) => (
+              <Card key={proposal.id} className="bg-white/10 border-white/20">
+                <CardHeader>
+                  <CardTitle className="text-white text-sm">
+                    Portfolio Adjustment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-white/80 text-sm">
+                    {proposal.rationale}
+                  </p>
+                  
+                  <pre className="bg-black/20 p-3 rounded text-xs text-white/70 overflow-auto">
+                    {JSON.stringify(proposal.plan, null, 2)}
+                  </pre>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleProposalAction(proposal.id, 'approve')}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      size="sm"
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={() => handleProposalAction(proposal.id, 'reject')}
+                      variant="outline"
+                      className="flex-1 border-white/30 text-white hover:bg-white/10"
+                      size="sm"
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-8 pt-8 border-t border-white/20">
+          <p className="text-xs text-white/40 text-center">
+            This is an <strong>educational simulation</strong>. No real money is invested. 
+            Nothing here is investment advice.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

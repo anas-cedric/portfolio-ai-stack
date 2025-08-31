@@ -182,7 +182,7 @@ function PortfolioQuizContent() {
   };
 
   const handleProceedToOnboarding = () => {
-    router.push('/onboarding');
+    router.push('/dashboard');
   };
 
   const currentStepIndex = STEPS.indexOf(currentStep);

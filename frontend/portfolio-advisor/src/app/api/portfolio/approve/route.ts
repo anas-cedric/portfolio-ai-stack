@@ -9,6 +9,7 @@ import {
   calculateNotionalAmount,
   type NotionalOrder
 } from "@/lib/alpacaBroker";
+import { logActivity, logOrderSubmission } from "@/lib/supabase";
 
 type Weight = { 
   symbol: string; 
@@ -57,25 +58,8 @@ function generateTestSSN(userId: string): string {
   return `${area}${group}${serial}`;
 }
 
-// Store Alpaca account ID for user (calls your backend)
-async function storeAlpacaAccountForUser(userId: string, alpacaAccountId: string): Promise<void> {
-  try {
-    const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
-    const API_KEY = process.env.API_KEY || '';
-    
-    await fetch(`${BACKEND_URL}/api/v1/users/${userId}/alpaca-account`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY
-      },
-      body: JSON.stringify({ alpaca_account_id: alpacaAccountId })
-    });
-  } catch (error) {
-    console.error('Failed to store Alpaca account in backend:', error);
-    // Non-critical, continue execution
-  }
-}
+// Note: We now store Alpaca account IDs in Supabase via activity logging
+// No separate storage function needed as we log the account creation
 
 // Get or create Alpaca account for user
 async function ensureAlpacaAccount(
@@ -132,9 +116,6 @@ async function ensureAlpacaAccount(
       ]
     });
 
-    // Store the account ID for future use
-    await storeAlpacaAccountForUser(userId, account.id);
-    
     return account.id;
   } catch (error: any) {
     console.error('Failed to create Alpaca account - Full error:', {
@@ -205,6 +186,16 @@ export async function POST(req: NextRequest) {
       userLastName
     );
 
+    // Log account creation activity
+    await logActivity(
+      userId,
+      'info',
+      'Cedric created your $10,000 simulated portfolio',
+      `Your paper trading account has been funded and is ready for trading. Account ID: ${accountId}`,
+      { alpaca_account_id: accountId, total_investment: totalInvestment },
+      accountId
+    );
+
     // 4. Fund the account (journal from firm account)
     const firmAccountId = process.env.ALPACA_FIRM_ACCOUNT_ID!;
     
@@ -252,6 +243,14 @@ export async function POST(req: NextRequest) {
         batch.map(async (order) => {
           try {
             const result = await placeOrder(accountId, order);
+            
+            // Log successful order
+            await logOrderSubmission(userId, accountId, order.client_order_id, {
+              order: order,
+              result: result,
+              status: 'submitted'
+            });
+            
             submittedOrders.push({
               symbol: order.symbol,
               notional: order.notional,
@@ -261,6 +260,14 @@ export async function POST(req: NextRequest) {
             console.log(`Order placed: ${order.symbol} for $${order.notional}`);
           } catch (error: any) {
             console.error(`Order failed for ${order.symbol}:`, error?.response?.data || error.message);
+            
+            // Log failed order
+            await logOrderSubmission(userId, accountId, order.client_order_id, {
+              order: order,
+              error: error?.response?.data || error.message,
+              status: 'failed'
+            });
+            
             failedOrders.push({
               symbol: order.symbol,
               notional: order.notional,
@@ -276,7 +283,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 8. Return summary
+    // 8. Log order execution summary
+    await logActivity(
+      userId,
+      'trade_executed',
+      `Portfolio execution completed`,
+      `Successfully submitted ${submittedOrders.length} orders, ${failedOrders.length} failed. Total investment: $${totalInvestment}`,
+      {
+        orders_submitted: submittedOrders.length,
+        orders_failed: failedOrders.length,
+        submitted_orders: submittedOrders,
+        failed_orders: failedOrders
+      },
+      accountId
+    );
+
+    // 9. Return summary
     return NextResponse.json({
       success: true,
       accountId,
