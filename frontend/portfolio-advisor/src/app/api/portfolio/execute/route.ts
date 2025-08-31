@@ -151,14 +151,16 @@ export async function POST(req: NextRequest) {
           // Log successful order
           await logOrderSubmission(
             user.id,
-            result.id,
+            accountId,
             result.client_order_id || order.client_order_id || '',
-            order.symbol,
-            'buy',
-            order.notional,
-            'market',
-            'submitted',
-            accountId
+            {
+              order_id: result.id,
+              symbol: order.symbol,
+              side: 'buy',
+              notional: order.notional,
+              type: 'market',
+              status: 'submitted'
+            }
           );
 
           return { success: true, order: result };
@@ -168,15 +170,16 @@ export async function POST(req: NextRequest) {
           // Log failed order
           await logOrderSubmission(
             user.id,
-            'failed',
-            order.client_order_id || '',
-            order.symbol,
-            'buy',
-            order.notional,
-            'market',
-            'failed',
             accountId,
-            error.message
+            order.client_order_id || '',
+            {
+              symbol: order.symbol,
+              side: 'buy',
+              notional: order.notional,
+              type: 'market',
+              status: 'failed',
+              error_message: error.message
+            }
           );
 
           return { success: false, symbol: order.symbol, error: error.message };
