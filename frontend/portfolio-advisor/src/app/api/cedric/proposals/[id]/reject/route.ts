@@ -22,6 +22,12 @@ export async function POST(
     const proposalId = params.id;
 
     // First, fetch the proposal to verify ownership and get details
+    if (!supabase) {
+      return NextResponse.json({ 
+        error: "Supabase not configured" 
+      }, { status: 500 });
+    }
+
     const { data: proposal, error: fetchError } = await supabase
       .from('cedric_proposal')
       .select('*')

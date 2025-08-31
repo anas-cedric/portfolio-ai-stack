@@ -1,16 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase client configuration
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!; // Use service key for server-side operations
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
-// Create Supabase client for server-side operations
-export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.warn('Supabase environment variables not set. Some features may not work.');
+}
+
+// Create Supabase client for server-side operations (only if env vars are available)
+export const supabase = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null;
 
 // Database helper functions for Cedric features
 export async function logActivity(
@@ -21,6 +27,11 @@ export async function logActivity(
   meta?: any,
   alpacaAccountId?: string
 ) {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping activity log');
+    return;
+  }
+
   const { error } = await supabase
     .from('activity_log')
     .insert([{
@@ -44,6 +55,11 @@ export async function logOrderSubmission(
   clientOrderId: string,
   payload: any
 ) {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping order submission log');
+    return;
+  }
+
   const { error } = await supabase
     .from('order_submission_log')
     .insert([{
@@ -60,6 +76,11 @@ export async function logOrderSubmission(
 }
 
 export async function getActivitiesByUser(kindeUserId: string, limit = 50) {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning empty activities');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('activity_log')
     .select('*')
@@ -72,7 +93,7 @@ export async function getActivitiesByUser(kindeUserId: string, limit = 50) {
     throw error;
   }
 
-  return data;
+  return data || [];
 }
 
 export async function createCedricProposal(
@@ -82,6 +103,11 @@ export async function createCedricProposal(
   plan: any,
   expiresAt?: Date
 ) {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping proposal creation');
+    return { id: 'mock-proposal', kinde_user_id: kindeUserId, alpaca_account_id: alpacaAccountId, rationale, plan, status: 'pending', created_at: new Date().toISOString() };
+  }
+
   const { data, error } = await supabase
     .from('cedric_proposal')
     .insert([{
@@ -103,6 +129,11 @@ export async function createCedricProposal(
 }
 
 export async function getCedricProposalsByUser(kindeUserId: string) {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning empty proposals');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('cedric_proposal')
     .select('*')
@@ -115,13 +146,18 @@ export async function getCedricProposalsByUser(kindeUserId: string) {
     throw error;
   }
 
-  return data;
+  return data || [];
 }
 
 export async function updateProposalStatus(
   proposalId: string,
   status: 'approved' | 'rejected' | 'expired'
 ) {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping proposal status update');
+    return;
+  }
+
   const updateData: any = { status };
   
   if (status === 'approved') {
@@ -148,6 +184,11 @@ export async function savePortfolioSnapshot(
   positions: any[],
   performanceData?: any
 ) {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping portfolio snapshot');
+    return;
+  }
+
   const { error } = await supabase
     .from('portfolio_snapshot')
     .insert([{
@@ -172,6 +213,11 @@ export async function saveCedricChatMessage(
   content: string,
   context?: any
 ) {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping chat message');
+    return;
+  }
+
   const { error } = await supabase
     .from('cedric_chat')
     .insert([{

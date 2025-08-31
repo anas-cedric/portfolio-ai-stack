@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
             const result = await placeOrder(accountId, order);
             
             // Log successful order
-            await logOrderSubmission(userId, accountId, order.client_order_id, {
+            await logOrderSubmission(userId, accountId, order.client_order_id || `order-${Date.now()}-${order.symbol}`, {
               order: order,
               result: result,
               status: 'submitted'
@@ -262,7 +262,7 @@ export async function POST(req: NextRequest) {
             console.error(`Order failed for ${order.symbol}:`, error?.response?.data || error.message);
             
             // Log failed order
-            await logOrderSubmission(userId, accountId, order.client_order_id, {
+            await logOrderSubmission(userId, accountId, order.client_order_id || `order-${Date.now()}-${order.symbol}`, {
               order: order,
               error: error?.response?.data || error.message,
               status: 'failed'
