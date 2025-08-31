@@ -83,7 +83,7 @@ async function ensureAlpacaAccount(
   email: string, 
   givenName: string, 
   familyName: string
-): Promise<string> {
+): Promise<{ accountId: string; testEmail: string }> {
   // Check if user already has an Alpaca account (from your backend or local storage)
   // For MVP, we'll create a new account each time
   // In production, you'd check your database first
@@ -133,7 +133,7 @@ async function ensureAlpacaAccount(
       ]
     });
 
-    return account.id;
+    return { accountId: account.id, testEmail };
   } catch (error: any) {
     console.error('Failed to create Alpaca account - Full error:', {
       status: error?.response?.status,
@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Ensure user has an Alpaca account
-    const accountId = await ensureAlpacaAccount(
+    const { accountId, testEmail } = await ensureAlpacaAccount(
       userId,
       userEmail,
       userFirstName,
