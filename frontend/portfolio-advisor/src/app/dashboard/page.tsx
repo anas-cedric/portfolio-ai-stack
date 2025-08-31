@@ -91,6 +91,13 @@ export default function DashboardPage() {
       setActivities(activitiesData.activities || []);
       setProposals(proposalsData.proposals || []);
 
+      // If user has no activities, they probably haven't completed portfolio approval yet
+      if (activitiesData.activities && activitiesData.activities.length === 0) {
+        console.log('No activities found, redirecting to portfolio quiz');
+        router.push('/portfolio-quiz');
+        return;
+      }
+
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error);
       setError(error.message);
