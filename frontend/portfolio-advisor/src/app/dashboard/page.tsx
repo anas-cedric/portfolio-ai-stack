@@ -99,6 +99,9 @@ function DashboardContent() {
 
   // Check account status and update activities if changed
   const checkAccountStatus = async () => {
+    const pollTimestamp = new Date().toISOString();
+    console.log(`[${pollTimestamp}] FRONTEND POLL: Starting status check`);
+    
     try {
       const response = await fetch('/api/portfolio/status/check', {
         method: 'POST'
@@ -106,22 +109,27 @@ function DashboardContent() {
 
       if (response.ok) {
         const statusData = await response.json();
-        console.log('Status check result:', statusData);
+        console.log(`[${pollTimestamp}] FRONTEND POLL RESULT:`, {
+          account: statusData.accountId,
+          status: `${statusData.previousStatus} → ${statusData.currentStatus}`,
+          changed: statusData.statusChanged,
+          buying_power: statusData.accountDetails?.buying_power
+        });
         
         // If status changed, refresh dashboard data to get new activities
         if (statusData.statusChanged) {
-          console.log(`Status changed to ${statusData.currentStatus}, refreshing dashboard`);
+          console.log(`[${pollTimestamp}] STATUS CHANGED: ${statusData.previousStatus} → ${statusData.currentStatus}, refreshing dashboard`);
           await fetchDashboardData();
         } else {
-          // If no status change but still checking, just refresh activities
+          console.log(`[${pollTimestamp}] NO CHANGE: Status still ${statusData.currentStatus}, refreshing activities`);
           await fetchDashboardData();
         }
       } else {
-        console.warn('Status check failed, falling back to regular refresh');
+        console.warn(`[${pollTimestamp}] POLL FAILED: Status check API returned ${response.status}, falling back to regular refresh`);
         await fetchDashboardData();
       }
     } catch (error) {
-      console.error('Status check error:', error);
+      console.error(`[${pollTimestamp}] POLL ERROR:`, error);
       // Fallback to regular refresh on error
       await fetchDashboardData();
     }

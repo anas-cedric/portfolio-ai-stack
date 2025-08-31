@@ -32,13 +32,14 @@ export async function POST(req: NextRequest) {
                           accountActivity.meta.initial_status || 
                           'UNKNOWN';
 
-    console.log(`Checking status for account ${accountId}, previous status: ${previousStatus}`);
+    const checkTimestamp = new Date().toISOString();
+    console.log(`[${checkTimestamp}] POLLING: Checking status for account ${accountId}, previous status: ${previousStatus}`);
 
     // Check current account status from Alpaca
     const account = await getAccount(accountId);
     const currentStatus = account.status;
 
-    console.log(`Account ${accountId} status: ${previousStatus} → ${currentStatus}`);
+    console.log(`[${checkTimestamp}] POLLING RESULT: Account ${accountId} status: ${previousStatus} → ${currentStatus}`);
 
     // If status changed, log new activity
     if (currentStatus !== previousStatus) {
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
         accountId
       );
 
-      console.log(`Status change logged: ${previousStatus} → ${currentStatus}`);
+      console.log(`[${checkTimestamp}] STATUS CHANGE: ${previousStatus} → ${currentStatus} logged to activities`);
     }
 
     return NextResponse.json({
