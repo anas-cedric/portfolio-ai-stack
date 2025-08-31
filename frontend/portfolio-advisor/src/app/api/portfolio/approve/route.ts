@@ -133,6 +133,30 @@ async function ensureAlpacaAccount(
       ]
     });
 
+    // Wait for account to be approved (sandbox should be instant, but sometimes needs a moment)
+    let accountStatus = account.status;
+    let retries = 0;
+    const maxRetries = 10;
+    
+    while (accountStatus !== 'APPROVED' && retries < maxRetries) {
+      console.log(`Account status: ${accountStatus}, waiting for approval... (attempt ${retries + 1}/${maxRetries})`);
+      
+      // Wait 1 second before checking again
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Check account status
+      const updatedAccount = await getAccount(account.id);
+      accountStatus = updatedAccount.status;
+      retries++;
+    }
+    
+    if (accountStatus !== 'APPROVED') {
+      console.warn(`Account ${account.id} not approved after ${maxRetries} attempts. Status: ${accountStatus}`);
+      // Continue anyway - the account exists even if not fully approved
+    } else {
+      console.log(`Account ${account.id} approved successfully`);
+    }
+    
     return { accountId: account.id, testEmail };
   } catch (error: any) {
     console.error('Failed to create Alpaca account - Full error:', {
