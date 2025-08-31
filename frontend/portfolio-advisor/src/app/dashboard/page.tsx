@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, MessageCircle, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import OnboardingRouter from '@/components/OnboardingRouter';
 
 type Activity = {
   id: string;
@@ -58,7 +59,7 @@ const ActivityIcon = ({ type }: { type: Activity['type'] }) => {
   }
 };
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useKindeBrowserClient();
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -68,12 +69,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isAuthLoading && !user) {
-      router.push('/api/auth/login');
-    }
-  }, [user, isAuthLoading, router]);
+  // Note: Authentication and routing now handled by OnboardingRouter
 
   // Fetch data when user is available
   useEffect(() => {
@@ -165,29 +161,14 @@ export default function DashboardPage() {
         });
       }
 
-      // Check if we have activities or if this might be a fresh approval
-      // Don't redirect immediately - could be Supabase not configured or timing issue
+      // If no activities, show default setup state (OnboardingRouter ensures user should be here)
       if (activitiesData.activities && activitiesData.activities.length === 0) {
-        // Check if user just came from portfolio approval by looking for referrer or URL params
-        const urlParams = new URLSearchParams(window.location.search);
-        const fromApproval = urlParams.get('from') === 'approval' || document.referrer.includes('/portfolio-quiz');
-        
-        if (!fromApproval) {
-          console.log('No activities found and not from approval, redirecting to portfolio quiz');
-          // Only redirect after a delay to avoid immediate bounce
-          setTimeout(() => {
-            router.push('/portfolio-quiz');
-          }, 2000);
-          return;
-        } else {
-          console.log('No activities but user came from approval - showing setup state');
-          // Set a default portfolio state for fresh approvals
-          setPortfolioState({
-            status: 'SUBMITTED',
-            totalInvestment: 10000,
-            hasExecutedTrades: false
-          });
-        }
+        console.log('No activities found, showing default setup state');
+        setPortfolioState({
+          status: 'SUBMITTED',
+          totalInvestment: 10000,
+          hasExecutedTrades: false
+        });
       }
 
       // Check if account is ACTIVE but trades not executed yet
@@ -512,5 +493,13 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <OnboardingRouter expectedState="portfolio_approved">
+      <DashboardContent />
+    </OnboardingRouter>
   );
 }

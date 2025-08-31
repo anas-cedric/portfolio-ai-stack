@@ -96,6 +96,138 @@ export async function getActivitiesByUser(kindeUserId: string, limit = 50) {
   return data || [];
 }
 
+// --- User Onboarding State Management ---
+
+export type OnboardingState = 'new' | 'quiz_completed' | 'portfolio_approved' | 'active';
+
+export type UserOnboarding = {
+  id: string;
+  kinde_user_id: string;
+  onboarding_state: OnboardingState;
+  quiz_data?: any;
+  portfolio_preferences?: any;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function getUserOnboardingState(kindeUserId: string): Promise<UserOnboarding | null> {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning default onboarding state');
+    return {
+      id: 'default',
+      kinde_user_id: kindeUserId,
+      onboarding_state: 'new',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  const { data, error } = await supabase
+    .from('user_onboarding')
+    .select('*')
+    .eq('kinde_user_id', kindeUserId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') { // No rows returned
+      return null;
+    }
+    console.error('Failed to get user onboarding state:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function createUserOnboardingState(
+  kindeUserId: string, 
+  initialState: OnboardingState = 'new'
+): Promise<UserOnboarding> {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning mock onboarding state');
+    return {
+      id: 'mock',
+      kinde_user_id: kindeUserId,
+      onboarding_state: initialState,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  const { data, error } = await supabase
+    .from('user_onboarding')
+    .insert({
+      kinde_user_id: kindeUserId,
+      onboarding_state: initialState
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create user onboarding state:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function updateUserOnboardingState(
+  kindeUserId: string, 
+  newState: OnboardingState, 
+  additionalData?: {
+    quiz_data?: any;
+    portfolio_preferences?: any;
+  }
+): Promise<UserOnboarding> {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning mock updated state');
+    return {
+      id: 'mock',
+      kinde_user_id: kindeUserId,
+      onboarding_state: newState,
+      ...additionalData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  const updateData: any = {
+    onboarding_state: newState,
+    updated_at: new Date().toISOString()
+  };
+
+  if (additionalData?.quiz_data) {
+    updateData.quiz_data = additionalData.quiz_data;
+  }
+  if (additionalData?.portfolio_preferences) {
+    updateData.portfolio_preferences = additionalData.portfolio_preferences;
+  }
+
+  const { data, error } = await supabase
+    .from('user_onboarding')
+    .update(updateData)
+    .eq('kinde_user_id', kindeUserId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update user onboarding state:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getOrCreateUserOnboardingState(kindeUserId: string): Promise<UserOnboarding> {
+  let onboardingState = await getUserOnboardingState(kindeUserId);
+  
+  if (!onboardingState) {
+    onboardingState = await createUserOnboardingState(kindeUserId);
+  }
+
+  return onboardingState;
+}
+
 export async function createCedricProposal(
   kindeUserId: string,
   alpacaAccountId: string,

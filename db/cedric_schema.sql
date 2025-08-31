@@ -22,6 +22,14 @@ BEGIN
   END IF;
 END$$;
 
+-- 3.5) User onboarding state enum
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'onboarding_state') THEN
+    CREATE TYPE onboarding_state AS ENUM ('new','quiz_completed','portfolio_approved','active');
+  END IF;
+END$$;
+
 -- 4) Cedric proposals table (AI-generated portfolio adjustments)
 CREATE TABLE IF NOT EXISTS cedric_proposal (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -96,5 +104,32 @@ CREATE TABLE IF NOT EXISTS cedric_chat (
 
 CREATE INDEX IF NOT EXISTS idx_cedric_chat_user_session ON cedric_chat(kinde_user_id, session_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_cedric_chat_created_at ON cedric_chat(created_at DESC);
+
+-- 9) User onboarding state tracking
+CREATE TABLE IF NOT EXISTS user_onboarding (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kinde_user_id text NOT NULL UNIQUE,         -- Kinde user ID (one record per user)
+  onboarding_state onboarding_state NOT NULL DEFAULT 'new',
+  quiz_data jsonb,                             -- Store quiz responses
+  portfolio_preferences jsonb,                 -- Portfolio preferences from quiz
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_onboarding_user_id ON user_onboarding(kinde_user_id);
+CREATE INDEX IF NOT EXISTS idx_user_onboarding_state ON user_onboarding(onboarding_state);
+
+-- Trigger to update updated_at on user_onboarding
+CREATE OR REPLACE FUNCTION update_user_onboarding_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_user_onboarding_updated_at
+  BEFORE UPDATE ON user_onboarding
+  FOR EACH ROW EXECUTE FUNCTION update_user_onboarding_updated_at();
 
 -- End of Cedric schema additions

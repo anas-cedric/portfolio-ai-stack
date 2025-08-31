@@ -9,7 +9,7 @@ import {
   calculateNotionalAmount,
   type NotionalOrder
 } from "@/lib/alpacaBroker";
-import { logActivity, logOrderSubmission } from "@/lib/supabase";
+import { logActivity, logOrderSubmission, updateUserOnboardingState } from "@/lib/supabase";
 
 type Weight = { 
   symbol: string; 
@@ -239,6 +239,25 @@ export async function POST(req: NextRequest) {
       },
       accountId
     );
+
+    // Update user onboarding state to portfolio_approved
+    try {
+      await updateUserOnboardingState(
+        userId,
+        'portfolio_approved',
+        {
+          portfolio_preferences: {
+            weights: weights,
+            total_investment: totalInvestment,
+            approved_at: new Date().toISOString()
+          }
+        }
+      );
+      console.log(`Updated onboarding state to 'portfolio_approved' for user ${userId}`);
+    } catch (error) {
+      console.warn('Failed to update onboarding state:', error);
+      // Don't fail the entire request if onboarding state update fails
+    }
 
     // Return immediately - dashboard will handle the funding and execution process
     return NextResponse.json({
