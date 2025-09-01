@@ -21,11 +21,6 @@ export default function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/portfolio/:path*",
-    "/trade/:path*",
-    "/onboarding/:path*",
-    "/account/:path*",
-    "/settings/:path*"
+    "/disabled-for-testing/:path*"
   ]
 };
