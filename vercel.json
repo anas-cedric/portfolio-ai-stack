@@ -16,6 +16,10 @@
   ],
   "routes": [
     {
+      "src": "/api/alpaca/accounts/status/sse",
+      "dest": "/frontend/portfolio-advisor/api/alpaca/accounts/status/sse"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/src/api/portfolio_api.py"
     },

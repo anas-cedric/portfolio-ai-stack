@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,7 +67,7 @@ function DashboardContent() {
   const [portfolioState, setPortfolioState] = useState<PortfolioState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
+  const eventSrcRef = useRef<EventSource | null>(null);
 
   // Note: Authentication is handled by middleware; this page assumes an authenticated user
 
@@ -78,63 +78,54 @@ function DashboardContent() {
     }
   }, [user]);
 
-  // Auto-refresh when account is not ACTIVE yet
+  // Open SSE stream for account status updates when accountId is available
   useEffect(() => {
-    if (portfolioState && portfolioState.status !== 'ACTIVE' && !portfolioState.hasExecutedTrades) {
-      const timer = setTimeout(() => {
-        checkAccountStatus(); // Check status first, then refresh data
-      }, 15000); // Check every 15 seconds for faster updates
-      setRefreshTimer(timer);
-    } else if (refreshTimer) {
-      clearTimeout(refreshTimer);
-      setRefreshTimer(null);
+    if (!portfolioState?.accountId) return;
+
+    // Close any existing connection before opening a new one
+    if (eventSrcRef.current) {
+      try { eventSrcRef.current.close(); } catch {}
+      eventSrcRef.current = null;
     }
+
+    const url = `/api/alpaca/accounts/status/sse?accountId=${encodeURIComponent(portfolioState.accountId)}`;
+    const es = new EventSource(url);
+    eventSrcRef.current = es;
+
+    es.onopen = () => {
+      console.log('SSE connected for account', portfolioState.accountId);
+    };
+
+    es.onmessage = async (evt) => {
+      // Any account event -> reconcile status via server and refresh dashboard
+      try {
+        const payload = JSON.parse(evt.data);
+        console.log('SSE account event:', payload);
+      } catch {}
+
+      try {
+        const res = await fetch('/api/portfolio/status/check', { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          await res.json();
+        }
+      } catch (e) {
+        console.warn('Status reconcile failed:', e);
+      }
+
+      await fetchDashboardData();
+    };
+
+    es.onerror = (err) => {
+      console.warn('SSE error:', err);
+    };
 
     return () => {
-      if (refreshTimer) {
-        clearTimeout(refreshTimer);
-      }
+      try { es.close(); } catch {}
+      eventSrcRef.current = null;
     };
-  }, [portfolioState, refreshTimer]);
+  }, [portfolioState?.accountId]);
 
-  // Check account status and update activities if changed
-  const checkAccountStatus = async () => {
-    const pollTimestamp = new Date().toISOString();
-    console.log(`[${pollTimestamp}] FRONTEND POLL: Starting status check`);
-    
-    try {
-      const response = await fetch('/api/portfolio/status/check', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const statusData = await response.json();
-        console.log(`[${pollTimestamp}] FRONTEND POLL RESULT:`, {
-          account: statusData.accountId,
-          status: `${statusData.previousStatus} → ${statusData.currentStatus}`,
-          changed: statusData.statusChanged,
-          buying_power: statusData.accountDetails?.buying_power
-        });
-        
-        // If status changed, refresh dashboard data to get new activities
-        if (statusData.statusChanged) {
-          console.log(`[${pollTimestamp}] STATUS CHANGED: ${statusData.previousStatus} → ${statusData.currentStatus}, refreshing dashboard`);
-          await fetchDashboardData();
-        } else {
-          console.log(`[${pollTimestamp}] NO CHANGE: Status still ${statusData.currentStatus}, refreshing activities`);
-          await fetchDashboardData();
-        }
-      } else {
-        console.warn(`[${pollTimestamp}] POLL FAILED: Status check API returned ${response.status}, falling back to regular refresh`);
-        await fetchDashboardData();
-      }
-    } catch (error) {
-      console.error(`[${pollTimestamp}] POLL ERROR:`, error);
-      // Fallback to regular refresh on error
-      await fetchDashboardData();
-    }
-  };
+  // Removed 15s polling; SSE will drive updates
 
   const fetchDashboardData = async () => {
     try {
@@ -161,13 +152,19 @@ function DashboardContent() {
       const latestActivity = activitiesData.activities?.[0];
       if (latestActivity?.meta) {
         const meta = latestActivity.meta;
-        setPortfolioState({
+        const nextState: PortfolioState = {
           status: meta.account_status || meta.initial_status || 'SUBMITTED',
           accountId: meta.alpaca_account_id,
           totalInvestment: meta.total_investment || 10000,
           weights: meta.target_weights || meta.weights,
           hasExecutedTrades: meta.trades_executed || false
-        });
+        };
+        setPortfolioState(nextState);
+
+        // If account is ACTIVE and trades not executed yet, trigger execution
+        if (nextState.status === 'ACTIVE' && !nextState.hasExecutedTrades) {
+          await executePortfolioTrades(nextState);
+        }
       }
 
       // If no activities, show default setup state
@@ -180,10 +177,7 @@ function DashboardContent() {
         });
       }
 
-      // Check if account is ACTIVE but trades not executed yet
-      if (portfolioState && portfolioState.status === 'ACTIVE' && !portfolioState.hasExecutedTrades) {
-        executePortfolioTrades();
-      }
+      // No-op: execution decision handled above using fresh nextState
 
     } catch (error: any) {
       console.error('Failed to fetch dashboard data:', error);
@@ -193,8 +187,9 @@ function DashboardContent() {
     }
   };
 
-  const executePortfolioTrades = async () => {
-    if (!portfolioState?.accountId || !portfolioState?.weights) {
+  const executePortfolioTrades = async (stateOverride?: PortfolioState) => {
+    const s = stateOverride ?? portfolioState;
+    if (!s?.accountId || !s?.weights) {
       console.warn('Cannot execute trades: missing account ID or weights');
       return;
     }
@@ -204,9 +199,9 @@ function DashboardContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accountId: portfolioState.accountId,
-          weights: portfolioState.weights,
-          totalInvestment: portfolioState.totalInvestment
+          accountId: s.accountId,
+          weights: s.weights,
+          totalInvestment: s.totalInvestment
         })
       });
 
