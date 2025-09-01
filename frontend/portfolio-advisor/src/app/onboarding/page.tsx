@@ -46,17 +46,25 @@ export default function OnboardingPage() {
     .every(a => acceptedAgreements.has(a.id));
 
   useEffect(() => {
-    // Redirect to login if not authenticated
-    if (!isAuthLoading && !user) {
-      router.push('/api/auth/login');
-      return;
-    }
-
-    // Load agreements when user is authenticated
-    if (user?.id) {
-      loadAgreements();
+    // Decoupled onboarding: immediately route based on auth
+    if (!isAuthLoading) {
+      if (user?.id) {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/api/auth/login');
+      }
     }
   }, [user, isAuthLoading, router]);
+
+  // Render a minimal redirecting state; the rest of this file is now unused for MVP
+  return (
+    <div className="w-full h-screen flex items-center justify-center clouds-bg">
+      <div className="text-center">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+        <p className="text-gray-700">Redirecting...</p>
+      </div>
+    </div>
+  );
 
   const loadAgreements = async () => {
     try {

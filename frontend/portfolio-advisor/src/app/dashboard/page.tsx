@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, MessageCircle, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import OnboardingRouter from '@/components/OnboardingRouter';
+ 
 
 type Activity = {
   id: string;
@@ -69,31 +69,12 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // Note: Authentication and routing now handled by OnboardingRouter
+  // Note: Authentication is handled by middleware; this page assumes an authenticated user
 
-  // Fetch data when user is available and handle portfolio approval completion
+  // Fetch data when user is available
   useEffect(() => {
     if (user?.id) {
       fetchDashboardData();
-      
-      // Check if user came from portfolio approval
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('from') === 'approval') {
-        // User successfully reached dashboard after portfolio approval
-        // Update their onboarding state to 'active'
-        fetch('/api/onboarding', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ state: 'active' })
-        }).then(() => {
-          console.log('Updated onboarding state to active after successful dashboard access');
-          // Clean up the URL parameter
-          window.history.replaceState({}, '', '/dashboard');
-        }).catch(error => {
-          console.warn('Failed to update onboarding state to active:', error);
-        });
-      }
     }
   }, [user]);
 
@@ -189,7 +170,7 @@ function DashboardContent() {
         });
       }
 
-      // If no activities, show default setup state (OnboardingRouter ensures user should be here)
+      // If no activities, show default setup state
       if (activitiesData.activities && activitiesData.activities.length === 0) {
         console.log('No activities found, showing default setup state');
         setPortfolioState({
@@ -526,8 +507,6 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <OnboardingRouter expectedState="portfolio_approved">
-      <DashboardContent />
-    </OnboardingRouter>
+    <DashboardContent />
   );
 }

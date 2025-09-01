@@ -48,17 +48,15 @@ export default function AllocationSidebar({ portfolioData, onApprove, user }: Al
     setIsExecuting(true);
     setExecutionStatus('Executing portfolio...');
     
+    // Convert holdings to weights format expected by API
+    const weights = portfolioData.holdings.map(holding => ({
+      symbol: holding.ticker,
+      weight: holding.percentage
+    }));
+    // 1) Fire-and-forget backend approval; DO NOT block navigation on this call
     try {
-      // Convert holdings to weights format expected by API
-      const weights = portfolioData.holdings.map(holding => ({
-        symbol: holding.ticker,
-        weight: holding.percentage
-      }));
-      
-      // Call the Alpaca execution API with user info
-      console.log('Making API call with weights:', weights);
-      
-      const response = await fetch('/api/portfolio/approve', {
+      console.log('Scheduling non-blocking API call with weights:', weights);
+      void fetch('/api/portfolio/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -70,46 +68,29 @@ export default function AllocationSidebar({ portfolioData, onApprove, user }: Al
           userFirstName: user.given_name || 'User',
           userLastName: user.family_name || 'Account'
         })
-      });
-      
-      console.log('API response status:', response.status);
-      const result = await response.json();
-      console.log('API response body:', result);
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to execute portfolio');
-      }
-      
-      console.log('Portfolio executed successfully:', result);
-      setExecutionStatus('Portfolio executed successfully!');
-
-      // Update onboarding state to portfolio_approved BEFORE navigating, so Dashboard gate allows access
-      try {
-        const onboardingRes = await fetch('/api/onboarding', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ state: 'portfolio_approved' })
+      })
+        .then(async (response) => {
+          console.log('API response status:', response.status);
+          const result = await response.json().catch(() => ({}));
+          console.log('API response body:', result);
+          if (!response.ok) {
+            console.warn('Portfolio approval failed (non-blocking):', (result as any)?.error || result);
+            return;
+          }
+          console.log('Portfolio approved successfully');
+        })
+        .catch((err) => {
+          console.warn('Portfolio approval request error (non-blocking):', err);
         });
-        if (!onboardingRes.ok) {
-          const body = await onboardingRes.json().catch(() => ({}));
-          console.warn('Failed to set onboarding state to portfolio_approved:', body);
-        }
-      } catch (e) {
-        console.warn('Error updating onboarding state to portfolio_approved:', e);
-      }
-
-      // Redirect directly to dashboard with marker param; dashboard will finalize to 'active'
-      router.push('/dashboard?from=approval');
-
-      // Optional: notify parent (non-blocking)
-      try { onApprove?.(); } catch {}
-      
-    } catch (error: any) {
-      console.error('Failed to execute portfolio:', error);
-      setExecutionStatus(`Error: ${error.message}`);
-      setIsExecuting(false);
+    } catch (e) {
+      console.warn('Unexpected error scheduling approval request:', e);
     }
+
+    // 2) Redirect directly to dashboard
+    router.push('/dashboard');
+
+    // Optional: notify parent (non-blocking)
+    try { onApprove?.(); } catch {}
   };
   // Build holdings data (individual assets) - sorted by percentage (highest to lowest)
   const holdingsData = portfolioData.holdings

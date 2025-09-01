@@ -8,7 +8,6 @@ import { NextRequest } from "next/server";
  * - /dashboard - Main portfolio dashboard
  * - /portfolio - Portfolio management
  * - /trade - Trading interface  
- * - /onboarding - Account setup (requires auth first)
  * 
  * Public routes (not protected):
  * - / - Home page with quiz
@@ -24,7 +23,6 @@ export const config = {
     "/dashboard/:path*",
     "/portfolio/:path*",
     "/trade/:path*",
-    "/onboarding/:path*",
     "/account/:path*",
     "/settings/:path*"
   ]
