@@ -220,11 +220,12 @@ function PortfolioQuizContent() {
               <span className="text-sm text-white/80">
                 {user.given_name || user.email}
               </span>
-              <Link href="/api/auth/logout">
-                <button className="text-white/60 hover:text-white/80 text-sm transition-colors">
-                  Sign Out
-                </button>
-              </Link>
+              <button
+                onClick={() => { window.location.href = '/api/auth/logout'; }}
+                className="text-white/60 hover:text-white/80 text-sm transition-colors"
+              >
+                Sign Out
+              </button>
             </div>
           </div>
 

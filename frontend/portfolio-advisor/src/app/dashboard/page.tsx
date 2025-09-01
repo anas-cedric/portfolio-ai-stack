@@ -278,11 +278,12 @@ function DashboardContent() {
                 </div>
               </div>
               
-              <Link href="/api/auth/logout">
-                <button className="text-[#00121F]/60 hover:text-[#00121F]/80 text-sm transition-colors">
-                  Sign Out
-                </button>
-              </Link>
+              <button
+                onClick={() => { window.location.href = '/api/auth/logout'; }}
+                className="text-[#00121F]/60 hover:text-[#00121F]/80 text-sm transition-colors"
+              >
+                Sign Out
+              </button>
             </div>
 
             {/* Error display */}
