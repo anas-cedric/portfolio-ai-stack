@@ -85,6 +85,9 @@ export default function OnboardingRouter({
         }
         break;
       case 'portfolio_approved':
+        // Don't auto-redirect for portfolio_approved - let parent component handle it
+        // This prevents race conditions with approval flow navigation
+        break;
       case 'active':
         router.push('/dashboard');
         break;

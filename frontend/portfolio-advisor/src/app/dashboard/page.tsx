@@ -71,10 +71,29 @@ function DashboardContent() {
 
   // Note: Authentication and routing now handled by OnboardingRouter
 
-  // Fetch data when user is available
+  // Fetch data when user is available and handle portfolio approval completion
   useEffect(() => {
     if (user?.id) {
       fetchDashboardData();
+      
+      // Check if user came from portfolio approval
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('from') === 'approval') {
+        // User successfully reached dashboard after portfolio approval
+        // Update their onboarding state to 'active'
+        fetch('/api/onboarding', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ state: 'active' })
+        }).then(() => {
+          console.log('Updated onboarding state to active after successful dashboard access');
+          // Clean up the URL parameter
+          window.history.replaceState({}, '', '/dashboard');
+        }).catch(error => {
+          console.warn('Failed to update onboarding state to active:', error);
+        });
+      }
     }
   }, [user]);
 
@@ -104,7 +123,8 @@ function DashboardContent() {
     
     try {
       const response = await fetch('/api/portfolio/status/check', {
-        method: 'POST'
+        method: 'POST',
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -142,8 +162,8 @@ function DashboardContent() {
 
       // Fetch activities and proposals in parallel
       const [activitiesRes, proposalsRes] = await Promise.all([
-        fetch('/api/activity'),
-        fetch('/api/cedric/proposals')
+        fetch('/api/activity', { credentials: 'include' }),
+        fetch('/api/cedric/proposals', { credentials: 'include' })
       ]);
 
       if (!activitiesRes.ok || !proposalsRes.ok) {

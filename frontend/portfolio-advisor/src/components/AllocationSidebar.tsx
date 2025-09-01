@@ -59,6 +59,7 @@ export default function AllocationSidebar({ portfolioData, onApprove, user }: Al
       const response = await fetch('/api/portfolio/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           weights,
           totalInvestment: 10000,
@@ -80,10 +81,8 @@ export default function AllocationSidebar({ portfolioData, onApprove, user }: Al
       console.log('Portfolio executed successfully:', result);
       setExecutionStatus('Portfolio executed successfully!');
       
-      // Wait a moment to show success message
-      setTimeout(() => {
-        onApprove(); // Proceed to onboarding
-      }, 2000);
+      // Call onApprove immediately - no delay needed
+      onApprove(); // Proceed to onboarding
       
     } catch (error: any) {
       console.error('Failed to execute portfolio:', error);
