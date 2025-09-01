@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { PortfolioData } from '@/lib/types';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -34,12 +35,13 @@ const ETF_SECTORS: Record<string, { sector: string; color: string }> = {
 export default function AllocationSidebar({ portfolioData, onApprove, user }: AllocationSidebarProps) {
   const [isExecuting, setIsExecuting] = React.useState(false);
   const [executionStatus, setExecutionStatus] = React.useState<string | null>(null);
+  const router = useRouter();
   
   const handleApproveClick = async () => {
     console.log('Approve button clicked', { hasOnApprove: !!onApprove, hasUser: !!user, user });
     
-    if (!onApprove || !user) {
-      console.log('Stopping execution - missing onApprove or user');
+    if (!user) {
+      console.log('Stopping execution - missing user');
       return;
     }
     
@@ -80,9 +82,28 @@ export default function AllocationSidebar({ portfolioData, onApprove, user }: Al
       
       console.log('Portfolio executed successfully:', result);
       setExecutionStatus('Portfolio executed successfully!');
-      
-      // Call onApprove immediately - no delay needed
-      onApprove(); // Proceed to onboarding
+
+      // Update onboarding state to portfolio_approved BEFORE navigating, so Dashboard gate allows access
+      try {
+        const onboardingRes = await fetch('/api/onboarding', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ state: 'portfolio_approved' })
+        });
+        if (!onboardingRes.ok) {
+          const body = await onboardingRes.json().catch(() => ({}));
+          console.warn('Failed to set onboarding state to portfolio_approved:', body);
+        }
+      } catch (e) {
+        console.warn('Error updating onboarding state to portfolio_approved:', e);
+      }
+
+      // Redirect directly to dashboard with marker param; dashboard will finalize to 'active'
+      router.push('/dashboard?from=approval');
+
+      // Optional: notify parent (non-blocking)
+      try { onApprove?.(); } catch {}
       
     } catch (error: any) {
       console.error('Failed to execute portfolio:', error);

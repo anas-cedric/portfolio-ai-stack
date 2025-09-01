@@ -60,10 +60,13 @@ export default function OnboardingPage() {
 
   const loadAgreements = async () => {
     try {
+      console.log('[Onboarding] Loading agreements');
       const res = await fetch('/api/agreements');
       const data = await res.json();
+      console.log('[Onboarding] Loaded agreements count', data?.agreements?.length || 0);
       setAgreements(data.agreements || []);
-    } catch {
+    } catch (e) {
+      console.error('[Onboarding] Failed to load agreements', e);
       setAgreements([]);
     }
   };
@@ -80,16 +83,22 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
+      console.log('[Onboarding] Accepting agreements', { userId: user?.id, count: acceptedAgreements.size });
       const response = await axios.post('/api/agreements/accept', {
         user_id: user?.id,
         agreement_ids: Array.from(acceptedAgreements)
       });
+      console.log('[Onboarding] Agreements accepted response', response.status, response.data);
 
       if (response.data.acceptances) {
         setCurrentStep('kyc');
       }
-    } catch (err) {
-      setError('Failed to record agreement acceptance');
+    } catch (err: any) {
+      console.error('[Onboarding] Agreements acceptance failed', err);
+      const message = (axios.isAxiosError(err) && (err.response?.data?.error || err.response?.data?.detail))
+        || err?.message
+        || 'Failed to record agreement acceptance';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +110,7 @@ export default function OnboardingPage() {
 
     try {
       // User info will come from Kinde user profile
-
+      console.log('[Onboarding] Starting KYC', { userId: user?.id });
       const response = await axios.post('/api/kyc/start', {
         user_id: user?.id,
         personal_info: {
@@ -110,6 +119,7 @@ export default function OnboardingPage() {
           email: user?.email
         }
       });
+      console.log('[Onboarding] KYC start response', response.status, response.data);
 
       if (response.data.id) {
         setKycApplicationId(response.data.id);
@@ -120,8 +130,12 @@ export default function OnboardingPage() {
           handleOpenAccount(response.data.id);
         }
       }
-    } catch (err) {
-      setError('Failed to start KYC process');
+    } catch (err: any) {
+      console.error('[Onboarding] KYC start failed', err);
+      const message = (axios.isAxiosError(err) && (err.response?.data?.error || err.response?.data?.detail))
+        || err?.message
+        || 'Failed to start KYC process';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -132,22 +146,48 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
+      console.log('[Onboarding] Opening account', { userId: user?.id, kycId: kycId || kycApplicationId });
       const response = await axios.post('/api/accounts/open', {
         user_id: user?.id,
         kyc_application_id: kycId || kycApplicationId
       });
+      console.log('[Onboarding] Open account response', response.status, response.data);
 
       if (response.data.id) {
         setAccountId(response.data.id);
         setCurrentStep('complete');
+        
+        // Mark onboarding as portfolio_approved so Dashboard gating allows entry
+        try {
+          await fetch('/api/onboarding', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              state: 'portfolio_approved',
+              portfolio_preferences: {
+                account_id: response.data.id,
+                approved_at: new Date().toISOString()
+              }
+            })
+          });
+          console.log('[Onboarding] Set state to portfolio_approved');
+        } catch (e) {
+          console.warn('[Onboarding] Failed to set onboarding state to portfolio_approved', e);
+          // Continue navigation regardless; Dashboard will update to active on arrival
+        }
         
         // Auto-redirect to dashboard after 3 seconds
         setTimeout(() => {
           router.push('/dashboard?from=approval');
         }, 3000);
       }
-    } catch (err) {
-      setError('Failed to open account');
+    } catch (err: any) {
+      console.error('[Onboarding] Open account failed', err);
+      const message = (axios.isAxiosError(err) && (err.response?.data?.error || err.response?.data?.detail))
+        || err?.message
+        || 'Failed to open account';
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -246,13 +286,28 @@ export default function OnboardingPage() {
       case 'account':
         return (
           <div className="space-y-6 text-center py-8">
-            <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin" />
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Opening Your Account</h2>
-              <p className="text-gray-700 mt-3">
-                We're setting up your brokerage account. This will just take a moment...
-              </p>
-            </div>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-16 h-16 text-blue-600 mx-auto animate-spin" />
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Opening Your Account</h2>
+                  <p className="text-gray-700 mt-3">
+                    We're setting up your brokerage account. This will just take a moment...
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Account Setup</h2>
+                <p className="text-gray-700 mt-3">We couldn't open your account automatically.</p>
+                <Button 
+                  onClick={() => handleOpenAccount()}
+                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl"
+                >
+                  Retry Account Opening
+                </Button>
+              </div>
+            )}
           </div>
         );
 

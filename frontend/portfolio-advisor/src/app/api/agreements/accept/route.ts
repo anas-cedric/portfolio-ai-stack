@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const BACKEND_URL = process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '')
+    const BACKEND_URL = process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '')
     const API_KEY = process.env.BACKEND_API_KEY || process.env.API_KEY || (process.env.NODE_ENV === 'development' ? 'demo_key' : '')
 
     if (process.env.NODE_ENV !== 'development' && (!BACKEND_URL || !API_KEY)) {

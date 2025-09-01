@@ -23,6 +23,10 @@ const nextConfig = {
         destination: `${apiUrl}/portfolio/propose`,
       },
       {
+        source: '/api/portfolio/approve',
+        destination: `${apiUrl}/portfolio/approve`,
+      },
+      {
         source: '/api/agreements/:path*',
         destination: `${apiUrl}/agreements/:path*`,
       },

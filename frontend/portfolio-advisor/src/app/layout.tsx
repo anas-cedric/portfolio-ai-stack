@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { UserProvider } from "@/contexts/UserContext";
 import { Analytics } from "@vercel/analytics/react";
+import { AuthProvider } from "@/providers/auth-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -29,19 +30,21 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`min-h-screen ${inter.variable} ${interDisplay.variable} font-sans`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <UserProvider>
-            <main className="w-full min-h-screen">
-              {children}
-            </main>
-            <Analytics />
-          </UserProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <UserProvider>
+              <main className="w-full min-h-screen">
+                {children}
+              </main>
+              <Analytics />
+            </UserProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

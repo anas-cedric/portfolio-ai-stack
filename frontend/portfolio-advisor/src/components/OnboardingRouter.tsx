@@ -32,6 +32,16 @@ export default function OnboardingRouter({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Allow certain states to pass when a later state is acceptable
+  const isStateAllowed = (current: OnboardingState, expected?: OnboardingState) => {
+    if (!expected) return true;
+    // If expecting 'portfolio_approved', also allow 'active' (post-approval)
+    if (expected === 'portfolio_approved') {
+      return current === 'portfolio_approved' || current === 'active';
+    }
+    return current === expected;
+  };
+
   useEffect(() => {
     if (!isAuthLoading && user?.id) {
       fetchOnboardingState();
@@ -56,7 +66,7 @@ export default function OnboardingRouter({
       setOnboardingData(data.onboarding);
 
       // Route based on current state vs expected state
-      if (expectedState && data.onboarding.state !== expectedState) {
+      if (expectedState && !isStateAllowed(data.onboarding.state, expectedState)) {
         routeToCorrectPage(data.onboarding.state);
       }
 
@@ -131,7 +141,7 @@ export default function OnboardingRouter({
   }
 
   // If we have expected state and it matches, or no expected state, render children
-  if (!expectedState || onboardingData?.state === expectedState) {
+  if (!expectedState || (onboardingData?.state && isStateAllowed(onboardingData.state, expectedState))) {
     return <>{children}</>;
   }
 

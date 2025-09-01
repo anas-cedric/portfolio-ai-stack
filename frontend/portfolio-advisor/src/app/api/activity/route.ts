@@ -30,7 +30,11 @@ export async function GET(request: NextRequest) {
         title: activity.title,
         body: activity.body,
         timestamp: activity.ts,
-        meta: activity.meta
+        // Ensure alpaca_account_id is always accessible from meta on the client
+        meta: {
+          ...(activity.meta || {}),
+          alpaca_account_id: (activity as any).alpaca_account_id || activity?.meta?.alpaca_account_id
+        }
       }))
     });
 
