@@ -1,14 +1,13 @@
-'use client';
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, MessageCircle, TrendingUp, DollarSign, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, MessageCircle, TrendingUp, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import DashboardClient from './DashboardClient';
  
 
 type Activity = {
@@ -70,7 +69,7 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const eventSrcRef = useRef<EventSource | null>(null);
 
-  // Note: Authentication is handled by middleware; this page assumes an authenticated user
+  // Authentication is handled by server wrapper + middleware; this page assumes an authenticated + authorized user
 
   // Fetch data when user is available
   useEffect(() => {
@@ -188,6 +187,25 @@ function DashboardContent() {
     }
   };
 
+  const handleProposalAction = async (proposalId: string, action: 'approve' | 'reject') => {
+    try {
+      const response = await fetch(`/api/cedric/proposals/${proposalId}/${action}`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to ${action} proposal`);
+      }
+
+      // Refresh data after action
+      await fetchDashboardData();
+
+    } catch (error: any) {
+      console.error(`Failed to ${action} proposal:`, error);
+      setError(error.message);
+    }
+  };
+
   const executePortfolioTrades = async (stateOverride?: PortfolioState) => {
     const s = stateOverride ?? portfolioState;
     if (!s?.accountId || !s?.weights) {
@@ -212,25 +230,6 @@ function DashboardContent() {
       }
     } catch (error) {
       console.error('Failed to execute portfolio trades:', error);
-    }
-  };
-
-  const handleProposalAction = async (proposalId: string, action: 'approve' | 'reject') => {
-    try {
-      const response = await fetch(`/api/cedric/proposals/${proposalId}/${action}`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} proposal`);
-      }
-
-      // Refresh data after action
-      await fetchDashboardData();
-
-    } catch (error: any) {
-      console.error(`Failed to ${action} proposal:`, error);
-      setError(error.message);
     }
   };
 
@@ -281,15 +280,6 @@ function DashboardContent() {
                 Sign Out
               </button>
             </div>
-
-            {/* Error display */}
-            {error && (
-              <Card className="border-red-200 bg-red-50">
-                <CardContent className="pt-6">
-                  <p className="text-red-600 text-sm">{error}</p>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Portfolio Summary */}
             <Card>
@@ -502,6 +492,6 @@ function DashboardContent() {
   );
 }
 
-export default function DashboardPage() {
-  return <DashboardClient />;
+export default function DashboardClient() {
+  return <DashboardContent />;
 }

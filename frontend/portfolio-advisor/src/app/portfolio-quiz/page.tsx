@@ -167,6 +167,24 @@ function PortfolioQuizContent() {
         portfolioGenerated: true,
         riskProfile: response.data.risk_bucket || 'unknown'
       });
+
+      // ✅ NEW: Mark onboarding state as quiz_completed on the server
+      try {
+        const quizPayload = {
+          quiz_data: { ...userAnswers, ...answers, age: userAge },
+          portfolio_preferences: {
+            risk_bucket: response.data?.risk_bucket,
+            target_weights: response.data?.weights || response.data?.target_weights,
+          },
+        };
+        await fetch('/api/onboarding/quiz-completed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(quizPayload),
+        });
+      } catch (e) {
+        console.warn('Failed to persist quiz completion state:', e);
+      }
       
       setCurrentStep('results');
     } catch (error) {
