@@ -36,9 +36,14 @@ export async function GET(req: NextRequest) {
       console.warn("SSE account validation skipped due to Supabase error:", e);
     }
 
-    // Build upstream Alpaca SSE URL
-    const baseURL = process.env.ALPACA_BASE_URL || "https://broker-api.sandbox.alpaca.markets/v1";
-    const upstreamUrl = new URL("/events/accounts/status", baseURL);
+    // Build upstream Alpaca SSE URL (ensure we don't drop the '/v1' path)
+    // If ALPACA_BASE_URL is provided, it may be either with or without trailing '/v1' and/or '/'
+    // Normalize to avoid URL resolution removing path segments.
+    const rawBase = process.env.ALPACA_BASE_URL || "https://broker-api.sandbox.alpaca.markets";
+    const baseNoSlash = rawBase.replace(/\/$/, '');
+    const baseWithV1 = /\/v1$/.test(baseNoSlash) ? baseNoSlash : `${baseNoSlash}/v1`;
+    const upstreamUrl = new URL(`${baseWithV1}/events/accounts/status`);
+    
 
     const since = url.searchParams.get("since");
     const since_id = url.searchParams.get("since_id");
