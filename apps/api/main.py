@@ -13,9 +13,12 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 import httpx
 from supabase import create_client, Client
+from urllib.parse import urlencode
+import base64
 
 # Ensure project root is on sys.path so 'src' package is importable in all environments
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -654,6 +657,185 @@ async def submit_orders(
         "order_ids": order_ids,
         "status": "submitted"
     }
+
+@app.get("/alpaca/accounts/status/sse")
+async def alpaca_accounts_status_sse(
+    request: Request,
+    accountId: str,
+    since: str | None = None,
+    since_id: str | None = None,
+    since_ulid: str | None = None,
+):
+    """Proxy Alpaca Broker API Account Status SSE.
+    Runs on Railway (no 300s cap) and forwards only events for the requested account.
+    """
+    try:
+        # Build upstream Alpaca SSE URL with normalized base (ensure '/v1' is present)
+        raw_base = os.getenv("ALPACA_BASE_URL", "https://broker-api.sandbox.alpaca.markets")
+        base_no_slash = raw_base.rstrip("/")
+        base_with_v1 = base_no_slash if base_no_slash.endswith("/v1") else f"{base_no_slash}/v1"
+        upstream = f"{base_with_v1}/events/accounts/status"
+
+        params = {}
+        # Only one of these is allowed by Alpaca; we pass through whichever is provided
+        if since:
+            params["since"] = since
+        elif since_id:
+            params["since_id"] = since_id
+        elif since_ulid:
+            params["since_ulid"] = since_ulid
+
+        if params:
+            upstream = f"{upstream}?{urlencode(params)}"
+
+        # Support multiple env names to avoid config drift
+        key = os.getenv("ALPACA_API_KEY_ID") or os.getenv("ALPACA_API_KEY")
+        secret = os.getenv("ALPACA_API_SECRET") or os.getenv("ALPACA_SECRET_KEY")
+        if not key or not secret:
+            err = {"error": "Missing Alpaca credentials"}
+            return StreamingResponse(
+                iter([f"event: error\ndata: {json.dumps(err)}\n\n".encode("utf-8")]),
+                media_type="text/event-stream",
+                status_code=500,
+                headers={
+                    "Cache-Control": "no-cache, no-transform",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+
+        auth_header = "Basic " + base64.b64encode(f"{key}:{secret}".encode("utf-8")).decode("utf-8")
+
+        print("[SSE][Railway] Connecting upstream", {
+            "accountId": accountId,
+            "upstream": upstream,
+        })
+
+        queue: asyncio.Queue[bytes] = asyncio.Queue()
+
+        async def reader_task():
+            try:
+                async with httpx.AsyncClient(timeout=None) as client:
+                    async with client.stream(
+                        "GET",
+                        upstream,
+                        headers={
+                            "Accept": "text/event-stream",
+                            "Authorization": auth_header,
+                        },
+                    ) as resp:
+                        if resp.status_code != 200:
+                            body = (await resp.aread())[:500]
+                            snippet = ""
+                            try:
+                                snippet = body.decode("utf-8", "ignore")
+                            except Exception:
+                                snippet = ""
+                            msg = {
+                                "error": "Upstream SSE connection failed",
+                                "status": resp.status_code,
+                                "body": snippet,
+                            }
+                            print("[SSE][Railway] Upstream connection failed", msg)
+                            await queue.put(f"event: error\ndata: {json.dumps(msg)}\n\n".encode("utf-8"))
+                            return
+
+                        buffer = ""
+                        async for chunk in resp.aiter_bytes():
+                            try:
+                                part = chunk.decode("utf-8", "ignore")
+                            except Exception:
+                                continue
+                            buffer += part
+
+                            while "\n\n" in buffer:
+                                raw_event, buffer = buffer.split("\n\n", 1)
+                                lines = raw_event.split("\n")
+                                data_lines = [ln[5:].lstrip() for ln in lines if ln.startswith("data:")]
+                                id_lines = [ln[3:].lstrip() for ln in lines if ln.startswith("id:")]
+                                sse_id = id_lines[0] if id_lines else None
+                                if not data_lines:
+                                    continue
+                                data_str = "\n".join(data_lines)
+                                try:
+                                    payload = json.loads(data_str)
+                                except Exception:
+                                    continue
+
+                                ev_account_id = (
+                                    payload.get("account_id")
+                                    or payload.get("id")
+                                    or (payload.get("account") or {}).get("id")
+                                    or payload.get("accountId")
+                                )
+                                if ev_account_id != accountId:
+                                    continue
+
+                                # Forward SSE id if present so clients can resume via Last-Event-ID
+                                if sse_id:
+                                    out = f"id: {sse_id}\ndata: {json.dumps(payload)}\n\n"
+                                else:
+                                    out = f"data: {json.dumps(payload)}\n\n"
+                                await queue.put(out.encode("utf-8"))
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                print("[SSE][Railway] Reader error", {"error": str(e)})
+            finally:
+                # Signal generator to end
+                await queue.put(b"")
+
+        async def heartbeat_task():
+            try:
+                while True:
+                    await asyncio.sleep(25)
+                    # Send a proper SSE event so clients can observe heartbeats
+                    await queue.put(b"event: ping\ndata: 1\n\n")
+            except asyncio.CancelledError:
+                pass
+
+        reader = asyncio.create_task(reader_task())
+        hb = asyncio.create_task(heartbeat_task())
+
+        async def event_gen():
+            try:
+                yield b": connected\n\n"
+                while True:
+                    chunk = await queue.get()
+                    if not chunk:
+                        break
+                    yield chunk
+            except asyncio.CancelledError:
+                pass
+            finally:
+                reader.cancel()
+                hb.cancel()
+                await asyncio.gather(reader, hb, return_exceptions=True)
+
+        return StreamingResponse(
+            event_gen(),
+            media_type="text/event-stream",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        print("[SSE][Railway] Proxy error", {"error": str(e)})
+        err = {"error": "Internal error"}
+        return StreamingResponse(
+            iter([f"event: error\ndata: {json.dumps(err)}\n\n".encode("utf-8")]),
+            media_type="text/event-stream",
+            status_code=500,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
 
 @app.post("/rebalance/check")
 async def check_rebalance(

@@ -68,6 +68,14 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const eventSrcRef = useRef<EventSource | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastEventIdRef = useRef<string | null>(null);
+  const lastEventULIDRef = useRef<string | null>(null);
+  const lastMessageAtRef = useRef<number>(Date.now());
+  const healthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isManuallyClosedRef = useRef(false);
+  const prevAccountIdRef = useRef<string | null>(null);
 
   // Authentication is handled by server wrapper + middleware; this page assumes an authenticated + authorized user
 
@@ -78,50 +86,136 @@ function DashboardContent() {
     }
   }, [user]);
 
-  // Open SSE stream for account status updates when accountId is available
+  // Open SSE stream for account status updates with auto-reconnect and since-token resumption
   useEffect(() => {
     if (!portfolioState?.accountId) return;
 
-    // Close any existing connection before opening a new one
-    if (eventSrcRef.current) {
-      try { eventSrcRef.current.close(); } catch {}
-      eventSrcRef.current = null;
+    // Reset since tokens when switching accounts
+    if (prevAccountIdRef.current !== portfolioState.accountId) {
+      lastEventIdRef.current = null;
+      lastEventULIDRef.current = null;
+      prevAccountIdRef.current = portfolioState.accountId;
     }
 
-    const url = `/api/alpaca/accounts/status/sse?accountId=${encodeURIComponent(portfolioState.accountId)}`;
-    const es = new EventSource(url);
-    eventSrcRef.current = es;
-
-    es.onopen = () => {
-      console.log('SSE connected for account', portfolioState.accountId);
-    };
-
-    es.onmessage = async (evt) => {
-      // Any account event -> reconcile status via server and refresh dashboard
-      try {
-        const payload = JSON.parse(evt.data);
-        console.log('SSE account event:', payload);
-      } catch {}
-
-      try {
-        const res = await fetch('/api/portfolio/status/check', { method: 'POST', credentials: 'include' });
-        if (res.ok) {
-          await res.json();
-        }
-      } catch (e) {
-        console.warn('Status reconcile failed:', e);
+    // Helpers
+    const cleanupEventSourceOnly = () => {
+      if (eventSrcRef.current) {
+        try { eventSrcRef.current.close(); } catch {}
+        eventSrcRef.current = null;
       }
-
-      await fetchDashboardData();
     };
 
-    es.onerror = (err) => {
-      console.warn('SSE error:', err);
+    const cleanupAll = () => {
+      isManuallyClosedRef.current = true;
+      cleanupEventSourceOnly();
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      if (healthTimerRef.current) {
+        clearInterval(healthTimerRef.current);
+        healthTimerRef.current = null;
+      }
     };
+
+    const buildUrl = () => {
+      const params = new URLSearchParams({ accountId: portfolioState.accountId! });
+      if (lastEventULIDRef.current) {
+        params.set('since_ulid', lastEventULIDRef.current);
+      } else if (lastEventIdRef.current) {
+        params.set('since_id', lastEventIdRef.current);
+      }
+      return `/api/alpaca/accounts/status/sse?${params.toString()}`;
+    };
+
+    const scheduleReconnect = () => {
+      if (isManuallyClosedRef.current) return;
+      const attempt = (reconnectAttemptRef.current = reconnectAttemptRef.current + 1);
+      const backoff = Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+      const jitter = Math.floor(Math.random() * 250);
+      const delay = backoff + jitter;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = setTimeout(() => {
+        connect();
+      }, delay);
+      console.warn(`SSE reconnect scheduled in ${delay}ms (attempt ${attempt})`);
+    };
+
+    const connect = () => {
+      isManuallyClosedRef.current = false;
+      const url = buildUrl();
+
+      // Close any existing connection before opening a new one
+      cleanupEventSourceOnly();
+
+      const es = new EventSource(url);
+      eventSrcRef.current = es;
+
+      es.onopen = () => {
+        reconnectAttemptRef.current = 0;
+        lastMessageAtRef.current = Date.now();
+        console.log('SSE connected for account', portfolioState.accountId);
+      };
+
+      es.onmessage = async (evt) => {
+        lastMessageAtRef.current = Date.now();
+
+        // Track last event identifiers for since-token reconnects
+        if (evt.lastEventId) {
+          lastEventIdRef.current = evt.lastEventId;
+        }
+
+        try {
+          const payload = JSON.parse(evt.data);
+          if (payload?.ulid && typeof payload.ulid === 'string') {
+            lastEventULIDRef.current = payload.ulid;
+          } else if (payload?.id && typeof payload.id === 'string') {
+            lastEventIdRef.current = payload.id;
+          }
+          console.log('SSE account event:', payload);
+        } catch {
+          // heartbeat or non-JSON payloads
+        }
+
+        try {
+          const res = await fetch('/api/portfolio/status/check', { method: 'POST', credentials: 'include' });
+          if (res.ok) {
+            await res.json();
+          }
+        } catch (e) {
+          console.warn('Status reconcile failed:', e);
+        }
+
+        await fetchDashboardData();
+      };
+
+      // Heartbeats or explicit ping events advance health tracking
+      es.addEventListener('ping', () => {
+        lastMessageAtRef.current = Date.now();
+      });
+
+      es.onerror = (err) => {
+        console.warn('SSE error:', err);
+        cleanupEventSourceOnly();
+        scheduleReconnect();
+      };
+    };
+
+    // Start connection
+    connect();
+
+    // Health monitor: restart if no messages for 60s
+    healthTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - lastMessageAtRef.current;
+      if (elapsed > 60000 && !isManuallyClosedRef.current) {
+        console.warn('SSE health check timeout; restarting connection');
+        cleanupEventSourceOnly();
+        scheduleReconnect();
+      }
+    }, 15000);
 
     return () => {
-      try { es.close(); } catch {}
-      eventSrcRef.current = null;
+      cleanupAll();
     };
   }, [portfolioState?.accountId]);
 

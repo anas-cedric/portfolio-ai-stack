@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const baseURL = process.env.ALPACA_BASE_URL || "https://broker-api.sandbox.alpaca.markets/v1";
+// Normalize Alpaca base URL so '/v1' is always present, regardless of how ALPACA_BASE_URL is configured
+const rawBase = process.env.ALPACA_BASE_URL || "https://broker-api.sandbox.alpaca.markets";
+const baseNoSlash = rawBase.replace(/\/$/, "");
+const baseWithV1 = /\/v1$/.test(baseNoSlash) ? baseNoSlash : `${baseNoSlash}/v1`;
+const baseURL = baseWithV1;
 const key = process.env.ALPACA_API_KEY_ID!;
 const secret = process.env.ALPACA_API_SECRET!;
 
