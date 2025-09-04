@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       success: true,
       proposals: proposals.map(proposal => ({
         id: proposal.id,
+        alpacaAccountId: proposal.alpaca_account_id,
         rationale: proposal.rationale,
         plan: proposal.plan,
         status: proposal.status,

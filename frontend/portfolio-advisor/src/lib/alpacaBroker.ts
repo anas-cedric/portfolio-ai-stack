@@ -144,6 +144,11 @@ export async function createJournalUSD(fromAccountId: string, toAccountId: strin
   return data;
 }
 
+export async function createJournal(request: JournalRequest) {
+  const { data } = await alpaca.post(`/journals`, request);
+  return data;
+}
+
 // --- Trading ---
 export async function placeOrder(accountId: string, order: NotionalOrder): Promise<Order> {
   const payload = {

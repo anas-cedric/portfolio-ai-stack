@@ -36,6 +36,7 @@ type Proposal = {
   status: string;
   createdAt: string;
   expiresAt?: string;
+  alpacaAccountId?: string;
 };
 
 const ActivityIcon = ({ type }: { type: Activity['type'] }) => {
@@ -246,23 +247,123 @@ function DashboardContent() {
       const latestActivity = activitiesData.activities?.[0];
       if (latestActivity?.meta) {
         const meta = latestActivity.meta;
-        const nextState: PortfolioState = {
+        let nextState: PortfolioState = {
           status: meta.account_status || meta.initial_status || 'SUBMITTED',
           accountId: meta.alpaca_account_id,
           totalInvestment: meta.total_investment || 10000,
           weights: meta.target_weights || meta.weights,
           hasExecutedTrades: meta.trades_executed || false
         };
+
+        // Fallbacks: scan activities for missing fields, then previous state, then proposals for weights
+        const acts: Activity[] = activitiesData.activities || [];
+
+        // Account ID fallback from any recent activity, or previous state, then proposals
+        if (!nextState.accountId) {
+          for (const a of acts) {
+            if (a?.meta?.alpaca_account_id) {
+              nextState.accountId = a.meta.alpaca_account_id;
+              break;
+            }
+          }
+          if (!nextState.accountId && portfolioState?.accountId) {
+            nextState.accountId = portfolioState.accountId;
+          }
+          if (!nextState.accountId) {
+            const proposalAcct = proposalsData?.proposals?.find((p: any) => p?.alpacaAccountId)?.alpacaAccountId;
+            if (proposalAcct) nextState.accountId = proposalAcct;
+          }
+        }
+
+        // Weights fallback from activities -> previous state -> proposals
+        if (!nextState.weights || nextState.weights.length === 0) {
+          let weightsFromActivities: any[] | undefined;
+          for (const a of acts) {
+            const w = a?.meta?.target_weights || a?.meta?.weights;
+            if (Array.isArray(w) && w.length > 0) { weightsFromActivities = w; break; }
+          }
+
+          let weightsFromProposals: any[] | undefined;
+          const plan = proposalsData?.proposals?.[0]?.plan;
+          if (!weightsFromActivities && plan) {
+            if (Array.isArray(plan?.weights) && plan.weights.length > 0) {
+              weightsFromProposals = plan.weights;
+            } else if (Array.isArray(plan?.target_weights) && plan.target_weights.length > 0) {
+              weightsFromProposals = plan.target_weights;
+            } else if (plan?.weights && typeof plan.weights === 'object') {
+              const entries = Object.entries(plan.weights).map(([symbol, weight]) => ({ symbol, weight }));
+              if (entries.length > 0) weightsFromProposals = entries as any[];
+            } else if (plan?.target_allocation && typeof plan.target_allocation === 'object') {
+              const entries = Object.entries(plan.target_allocation).map(([symbol, weight]) => ({ symbol, weight }));
+              if (entries.length > 0) weightsFromProposals = entries as any[];
+            }
+          }
+
+        
+          nextState.weights = (weightsFromActivities || portfolioState?.weights || weightsFromProposals) as Array<{ symbol: string; weight: number }> | undefined;
+        }
+
+        // totalInvestment fallback from activities -> previous state
+        if (!nextState.totalInvestment || nextState.totalInvestment === 10000) {
+          for (const a of acts) {
+            if (typeof a?.meta?.total_investment === 'number') {
+              nextState.totalInvestment = a.meta.total_investment;
+              break;
+            }
+          }
+          if (!nextState.totalInvestment && portfolioState?.totalInvestment) {
+            nextState.totalInvestment = portfolioState.totalInvestment;
+          }
+        }
+
+        // hasExecutedTrades fallback from any activity or previous state
+        if (!nextState.hasExecutedTrades) {
+          const executedInActivities = acts.some(a => a.type === 'trade_executed' || a?.meta?.trades_executed === true);
+          nextState.hasExecutedTrades = executedInActivities || !!portfolioState?.hasExecutedTrades || false;
+        }
+
         setPortfolioState(nextState);
 
         // If account is ACTIVE and trades not executed yet, trigger execution
-        if (nextState.status === 'ACTIVE' && !nextState.hasExecutedTrades) {
+        if (nextState.status === 'ACTIVE' && !nextState.hasExecutedTrades && nextState.accountId && nextState.weights && nextState.weights.length > 0) {
           await executePortfolioTrades(nextState);
         }
+      } else {
+        // No latest meta - attempt to derive minimal state from proposals/previous state
+        const plan = proposalsData?.proposals?.[0]?.plan;
+        let weightsFromProposals: any[] | undefined;
+        if (plan) {
+          if (Array.isArray(plan?.weights) && plan.weights.length > 0) {
+            weightsFromProposals = plan.weights;
+          } else if (Array.isArray(plan?.target_weights) && plan.target_weights.length > 0) {
+            weightsFromProposals = plan.target_weights;
+          } else if (plan?.weights && typeof plan.weights === 'object') {
+            const entries = Object.entries(plan.weights).map(([symbol, weight]) => ({ symbol, weight }));
+            if (entries.length > 0) weightsFromProposals = entries as any[];
+          } else if (plan?.target_allocation && typeof plan.target_allocation === 'object') {
+            const entries = Object.entries(plan.target_allocation).map(([symbol, weight]) => ({ symbol, weight }));
+            if (entries.length > 0) weightsFromProposals = entries as any[];
+          }
+        }
+
+        const proposalAcct = proposalsData?.proposals?.find((p: any) => p?.alpacaAccountId)?.alpacaAccountId;
+        const derivedState: PortfolioState = {
+          status: 'SUBMITTED',
+          accountId: proposalAcct || portfolioState?.accountId,
+          totalInvestment: portfolioState?.totalInvestment || 10000,
+          weights: (portfolioState?.weights || weightsFromProposals) as Array<{ symbol: string; weight: number }> | undefined,
+          hasExecutedTrades: portfolioState?.hasExecutedTrades || false
+        };
+
+        setPortfolioState(derivedState);
       }
 
       // If no activities, show default setup state
-      if (activitiesData.activities && activitiesData.activities.length === 0) {
+      if (
+        activitiesData.activities &&
+        activitiesData.activities.length === 0 &&
+        (!proposalsData.proposals || proposalsData.proposals.length === 0)
+      ) {
         console.log('No activities found, showing default setup state');
         setPortfolioState({
           status: 'SUBMITTED',
@@ -302,8 +403,12 @@ function DashboardContent() {
 
   const executePortfolioTrades = async (stateOverride?: PortfolioState) => {
     const s = stateOverride ?? portfolioState;
-    if (!s?.accountId || !s?.weights) {
-      console.warn('Cannot execute trades: missing account ID or weights');
+    if (!s?.accountId) {
+      console.warn('Cannot execute trades: missing account ID');
+      return;
+    }
+    if (!Array.isArray(s?.weights) || s.weights.length === 0) {
+      console.warn('Cannot execute trades: missing or empty weights');
       return;
     }
 
