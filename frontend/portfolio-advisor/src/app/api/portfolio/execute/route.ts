@@ -31,6 +31,42 @@ function toBatches<T>(arr: T[], size: number): T[][] {
   return batches;
 }
 
+// --- Utility helpers for execution flow ---
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
+function safeParseNumber(val?: string | number | null): number {
+  if (val === undefined || val === null) return 0;
+  const n = typeof val === 'number' ? val : Number(val);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function waitForBuyingPower(
+  accountId: string,
+  minRequired: number,
+  timeoutMs = 30000,
+  pollIntervalMs = 1500
+): Promise<{ buyingPower: number; cash: number; attempts: number; snapshots: Array<{ ts: string; status: string; buying_power?: string; cash?: string }> }> {
+  const start = Date.now();
+  let attempts = 0;
+  const snapshots: Array<{ ts: string; status: string; buying_power?: string; cash?: string }> = [];
+  while (Date.now() - start < timeoutMs) {
+    attempts += 1;
+    const acc = await getAccount(accountId);
+    snapshots.push({ ts: new Date().toISOString(), status: acc.status, buying_power: acc.buying_power, cash: acc.cash });
+    const bp = safeParseNumber(acc.buying_power);
+    const cash = safeParseNumber(acc.cash);
+    if (bp >= minRequired) {
+      return { buyingPower: bp, cash, attempts, snapshots };
+    }
+    await sleep(pollIntervalMs);
+  }
+  // Return last known values if timeout
+  const last = snapshots[snapshots.length - 1];
+  return { buyingPower: last ? safeParseNumber(last.buying_power) : 0, cash: last ? safeParseNumber(last.cash) : 0, attempts, snapshots };
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Get authenticated user
@@ -52,6 +88,17 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Normalize weights if provided as 0-1 fractions (convert to 0-100 percentages)
+    const weightSum = weights.reduce((acc, w) => acc + (Number.isFinite(w.weight) ? w.weight : 0), 0);
+    let weightsNormalized = false;
+    if (weightSum > 0 && weightSum <= 1.01) {
+      for (const w of weights) {
+        w.weight = Math.round(w.weight * 10000) / 100; // keep two decimals after converting to %
+      }
+      weightsNormalized = true;
+      console.log('Normalized fractional weights to percentages. New weights:', weights);
+    }
+
     console.log('Executing portfolio trades for account:', accountId);
 
     // 1. Check account status
@@ -65,40 +112,76 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Capture pre-funding snapshots
+    const preBuyingPower = safeParseNumber(account.buying_power);
+    const preCash = safeParseNumber(account.cash);
+    let postBuyingPower = preBuyingPower;
+    let postCash = preCash;
+    let bpPollAttempts = 0;
+    let bpSnapshots: Array<{ ts: string; status: string; buying_power?: string; cash?: string }> = [];
+    let fundingAttempted = false;
+    let fundingSucceeded = false;
+
     // 2. Fund the account (journal from firm account to user account)
-    const firmAccountId = process.env.ALPACA_FIRM_ACCOUNT_ID!;
-    console.log(`Funding account ${accountId} with $${totalInvestment} from firm account ${firmAccountId}`);
+    const firmAccountId = process.env.ALPACA_FIRM_ACCOUNT_ID;
+    console.log(`Funding plan: $${totalInvestment} from firm account ${firmAccountId ?? '(not configured)'}`);
     
-    try {
-      await createJournalUSD(firmAccountId, accountId, totalInvestment);
-      console.log(`Account ${accountId} funded successfully`);
-      
-      await logActivity(
-        user.id,
-        'info',
-        'Account funded successfully',
-        `Your paper trading account has been funded with $${totalInvestment.toLocaleString()} and is ready for trading.`,
-        { 
-          alpaca_account_id: accountId,
-          funding_amount: totalInvestment,
-          account_status: account.status
-        },
-        accountId
-      );
-    } catch (error: any) {
-      console.error('Funding failed:', error);
+    if (firmAccountId) {
+      fundingAttempted = true;
+      try {
+        await createJournalUSD(firmAccountId, accountId, totalInvestment);
+        console.log(`Account ${accountId} funded successfully`);
+
+        // Wait for buying power to reflect funding (tolerate 10% slack)
+        const waitRes = await waitForBuyingPower(accountId, preBuyingPower + totalInvestment * 0.9);
+        postBuyingPower = waitRes.buyingPower;
+        postCash = waitRes.cash;
+        bpPollAttempts = waitRes.attempts;
+        bpSnapshots = waitRes.snapshots;
+        fundingSucceeded = true;
+        
+        await logActivity(
+          user.id,
+          'info',
+          'Account funded successfully',
+          `Your paper trading account has been funded with $${totalInvestment.toLocaleString()} and is ready for trading.`,
+          { 
+            alpaca_account_id: accountId,
+            funding_amount: totalInvestment,
+            account_status: account.status,
+            pre_buying_power: preBuyingPower,
+            post_buying_power: postBuyingPower,
+            pre_cash: preCash,
+            post_cash: postCash,
+            bp_poll_attempts: bpPollAttempts
+          },
+          accountId
+        );
+      } catch (error: any) {
+        console.error('Funding failed or delayed:', error);
+        await logActivity(
+          user.id,
+          'warning',
+          'Account funding delayed',
+          'There was an issue funding your account. This is normal in sandbox mode. Orders will still be placed.',
+          { 
+            alpaca_account_id: accountId,
+            funding_error: error.message
+          },
+          accountId
+        );
+        // Continue with orders even if funding fails (sandbox mode)
+      }
+    } else {
+      console.warn('ALPACA_FIRM_ACCOUNT_ID not configured. Skipping funding journal.');
       await logActivity(
         user.id,
         'warning',
-        'Account funding delayed',
-        'There was an issue funding your account. This is normal in sandbox mode. Orders will still be placed.',
-        { 
-          alpaca_account_id: accountId,
-          funding_error: error.message
-        },
+        'Funding skipped',
+        'Firm account ID not configured on server. Attempting to place orders with existing buying power.',
+        { alpaca_account_id: accountId },
         accountId
       );
-      // Continue with orders even if funding fails (sandbox mode)
     }
 
     // 3. Get current prices for all symbols
@@ -107,7 +190,7 @@ export async function POST(req: NextRequest) {
     console.log('Current prices:', prices);
 
     // 4. Calculate order amounts and prepare orders
-    const orders: NotionalOrder[] = [];
+    let orders: NotionalOrder[] = [];
     let cashAllocation = 0;
 
     for (const weight of weights) {
@@ -133,6 +216,15 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`Prepared ${orders.length} orders, ${cashAllocation}% cash allocation`);
+
+    // Scale down to available buying power if necessary
+    const originalTotalNotional = orders.reduce((sum, o) => sum + (o.notional || 0), 0);
+    const availableBuyingPower = postBuyingPower || safeParseNumber(account.buying_power);
+    if (originalTotalNotional > 0 && availableBuyingPower > 0 && originalTotalNotional > availableBuyingPower) {
+      const scale = availableBuyingPower / originalTotalNotional;
+      orders = orders.map(o => ({ ...o, notional: Math.max(1, Number((o.notional * scale).toFixed(2))) }));
+      console.log(`Scaled orders by factor ${scale.toFixed(4)} to fit buying power $${availableBuyingPower.toFixed(2)} (from $${originalTotalNotional.toFixed(2)})`);
+    }
 
     // 5. Execute orders in batches
     const orderBatches = toBatches(orders, 5); // Process 5 orders at a time
@@ -218,7 +310,15 @@ export async function POST(req: NextRequest) {
         cash_allocation: cashAllocation,
         executed_order_ids: executedOrders.map(o => o.id),
         trades_executed: true,
-        account_status: 'ACTIVE'
+        account_status: 'ACTIVE',
+        pre_buying_power: preBuyingPower,
+        post_buying_power: postBuyingPower,
+        pre_cash: preCash,
+        post_cash: postCash,
+        bp_poll_attempts: bpPollAttempts,
+        funding_attempted: fundingAttempted,
+        funding_succeeded: fundingSucceeded,
+        weights_normalized: weightsNormalized
       },
       accountId
     );
@@ -231,6 +331,13 @@ export async function POST(req: NextRequest) {
       failedOrders: failedOrders.length,
       successRate,
       cashAllocation,
+      preBuyingPower,
+      postBuyingPower,
+      preCash,
+      postCash,
+      bpPollAttempts,
+      fundingAttempted,
+      fundingSucceeded,
       message: `Portfolio execution completed. ${executedOrders.length} orders placed successfully.`
     });
     
