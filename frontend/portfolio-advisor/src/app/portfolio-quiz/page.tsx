@@ -45,6 +45,10 @@ function PortfolioQuizContent() {
   const [firstName, setFirstName] = useState<string>('');
   const [lastName, setLastName] = useState<string>('');
   const [birthday, setBirthday] = useState<string>('');
+  // Birth date selection (more intuitive than browser date picker)
+  const [birthMonth, setBirthMonth] = useState<string>('');
+  const [birthDay, setBirthDay] = useState<string>('');
+  const [birthYear, setBirthYear] = useState<string>(String(new Date().getFullYear() - 30));
   const [isLoading, setIsLoading] = useState(false);
 
   // Redirect to login if not authenticated and handle step parameter
@@ -101,29 +105,59 @@ function PortfolioQuizContent() {
     setCurrentStep('questionnaire');
   };
 
+  // Helper to compute age from ISO date (YYYY-MM-DD)
+  const calculateAgeFromDateString = (dateStr: string): number => {
+    const today = new Date();
+    const birthDate = new Date(dateStr);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // Helpers for birthday selectors
+  const getDaysInMonth = (year: number, month: number): number => {
+    return new Date(year, month, 0).getDate(); // month is 1-based here
+  };
+  const currentYear = new Date().getFullYear();
+  const yearOptions: number[] = Array.from({ length: 83 }, (_, i) => (currentYear - 18) - i); // 18..100
+  const monthOptions = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+  ];
+  const maxDays = birthYear && birthMonth ? getDaysInMonth(parseInt(birthYear), parseInt(birthMonth)) : 31;
+  const dayOptions: number[] = Array.from({ length: maxDays }, (_, i) => i + 1);
+
   const handlePersonalInfoSubmit = () => {
-    if (!firstName || !lastName || !birthday || userAge === '') {
+    if (!firstName || !lastName || !birthYear || !birthMonth || !birthDay) {
       setError('Please fill in all fields');
       return;
     }
 
-    const today = new Date();
-    const birthDate = new Date(birthday);
-    const calculatedAge = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      setUserAge(calculatedAge - 1);
-    } else {
-      setUserAge(calculatedAge);
-    }
+    const birthdayStr = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`;
+    const calculatedAge = calculateAgeFromDateString(birthdayStr);
 
-    // ✅ GOOD: Store user data in context for app-wide access
+    setBirthday(birthdayStr);
+    setUserAge(calculatedAge);
+
+    // Store user data in context for app-wide access
     updateProfile({
-      age: typeof userAge === 'number' ? userAge : calculatedAge,
+      age: calculatedAge,
       firstName,
       lastName,
-      birthday
+      birthday: birthdayStr
     });
 
     setCurrentStep('questionnaire');
@@ -141,12 +175,16 @@ function PortfolioQuizContent() {
     try {
       const accessToken = await getAccessToken();
       
+      const derivedAge = typeof userAge === 'number'
+        ? userAge
+        : (birthday ? calculateAgeFromDateString(birthday) : undefined);
+
       const payload = {
-        answers: { ...userAnswers, ...answers, age: userAge.toString() },
+        answers: { ...userAnswers, ...answers, age: derivedAge !== undefined ? String(derivedAge) : '' },
         firstName,
         lastName, 
         birthday,
-        age: userAge.toString(),
+        age: derivedAge !== undefined ? String(derivedAge) : '',
         user_id: user.id
       };
 
@@ -226,10 +264,8 @@ function PortfolioQuizContent() {
 
       {currentStep !== 'results' && currentStep !== 'questionnaire' && (
         <div 
-          className="absolute flex flex-col items-start gap-12 w-[616px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
+          className="flex flex-col items-start gap-12 w-[616px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
           style={{
-            left: 'calc(50% - 616px/2)',
-            top: 'calc(50% - 667px/2)',
             boxSizing: 'border-box'
           }}
         >
@@ -314,29 +350,69 @@ function PortfolioQuizContent() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="birthday" className="text-white/80 text-sm font-medium">Birthday</label>
-                    <input
-                      id="birthday"
-                      type="date"
-                      value={birthday}
-                      onChange={(e) => setBirthday(e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all [color-scheme:dark]"
-                    />
-                  </div>
+                  {/* Birthday selectors across full width */}
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-white/80 text-sm font-medium">Birthday</label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {/* Month */}
+                      <select
+                        aria-label="Birth month"
+                        value={birthMonth}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBirthMonth(val);
+                          if (birthYear && birthDay) {
+                            const daysLimit = getDaysInMonth(parseInt(birthYear), parseInt(val));
+                            if (parseInt(birthDay) > daysLimit) setBirthDay('');
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all"
+                      >
+                        <option value="" className="bg-slate-900 text-white/70">Month</option>
+                        {monthOptions.map((m) => (
+                          <option key={m.value} value={m.value} className="bg-slate-900 text-white">
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
 
-                  <div className="space-y-2">
-                    <label htmlFor="age" className="text-white/80 text-sm font-medium">Age</label>
-                    <input
-                      id="age"
-                      type="number"
-                      min="18"
-                      max="100"
-                      value={userAge}
-                      onChange={(e) => setUserAge(e.target.value === '' ? '' : parseInt(e.target.value))}
-                      placeholder="Enter your age"
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all"
-                    />
+                      {/* Day */}
+                      <select
+                        aria-label="Birth day"
+                        value={birthDay}
+                        onChange={(e) => setBirthDay(e.target.value)}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all"
+                      >
+                        <option value="" className="bg-slate-900 text-white/70">Day</option>
+                        {dayOptions.map((d) => (
+                          <option key={d} value={String(d).padStart(2, '0')} className="bg-slate-900 text-white">
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Year */}
+                      <select
+                        aria-label="Birth year"
+                        value={birthYear}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBirthYear(val);
+                          if (birthMonth && birthDay) {
+                            const daysLimit = getDaysInMonth(parseInt(val), parseInt(birthMonth));
+                            if (parseInt(birthDay) > daysLimit) setBirthDay('');
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:bg-white/15 focus:border-white/30 focus:outline-none transition-all"
+                      >
+                        <option value="" className="bg-slate-900 text-white/70">Year</option>
+                        {yearOptions.map((y) => (
+                          <option key={y} value={String(y)} className="bg-slate-900 text-white">
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
