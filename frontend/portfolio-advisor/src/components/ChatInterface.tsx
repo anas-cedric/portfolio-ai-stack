@@ -49,7 +49,7 @@ export default function ChatInterface({
     setLocalUserPreferences(userPreferences);
     if (portfolioData && messages.length === 0) {
         if (portfolioData) {
-          const initialAssistantMsg = `Here’s your allocation. I’ll keep answers within 50–100 words. Ask for more if you want detail.`;
+          const initialAssistantMsg = `Here’s your allocation. I’ll keep it concise and explain in small chunks. Ask for more if you want detail.`;
           const initial = { content: initialAssistantMsg, role: 'assistant' as const };
           setMessages([initial]);
           setRawHistory([initial]);
@@ -74,10 +74,15 @@ export default function ChatInterface({
   }, [messages]);
 
 
-  const limitWords = (text: string, maxWords = 100) => {
-    const words = text.trim().split(/\s+/);
-    if (words.length <= maxWords) return text.trim();
-    return words.slice(0, maxWords).join(' ') + '… If you want more detail, ask me to expand.';
+  const toPlainText = (text: string) => {
+    if (!text) return '';
+    let s = text;
+    s = s.replace(/\*\*/g, ''); // bold markers
+    s = s.replace(/^[\-\*•]\s+/gm, ''); // bullets at line start
+    s = s.replace(/`+/g, ''); // code ticks
+    s = s.replace(/^#{1,6}\s*/gm, ''); // headings
+    s = s.replace(/[_]{1,3}([^_]+)[_]{1,3}/g, '$1'); // underscores formatting
+    return s.trim();
   };
 
   const handleSubmit = async (e: FormEvent, suggestionText?: string) => {
@@ -107,7 +112,7 @@ export default function ChatInterface({
         metadata: {
           conversation_state: 'complete',
           updated_portfolio: portfolioData,
-          system_instructions: `You are a professional wealth assistant. Keep each response within 50–100 words. Avoid long paragraphs. Use short sentences. If the user wants more, ask if they would like to expand. Provide educational context, not individualized advice. Focus on allocation rationale and simple explanations.`
+          system_instructions: `You are a professional wealth assistant. Avoid markdown formatting (no bullets, asterisks, or code blocks). Use plain sentences, 1–3 short sentences per turn. Be conversational and offer to expand or go deeper on request. Provide educational context, not individualized advice. Focus on simple, human-friendly explanations.`
         }
       }, {
         headers: {
@@ -126,11 +131,11 @@ export default function ChatInterface({
       if (newHistory.length > 0) {
         // Keep raw history unmodified
         setRawHistory(newHistory.map((m: any) => ({ content: m.content, role: m.role })));
-        // Display trimmed versions for UI
-        setMessages(newHistory.map((m: any) => ({ content: limitWords(m.content), role: m.role })));
+        // Display sanitized plain text in UI
+        setMessages(newHistory.map((m: any) => ({ content: toPlainText(m.content), role: m.role })));
       } else {
         const assistantContentRaw = typeof data.response === 'string' ? data.response : JSON.stringify(data.response);
-        const assistantContent = limitWords(assistantContentRaw);
+        const assistantContent = toPlainText(assistantContentRaw);
         const newAssistantMessage: Message = {
           content: assistantContent,
           role: 'assistant'

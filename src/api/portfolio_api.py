@@ -824,9 +824,9 @@ async def process_portfolio_chat(
                         "You are an explainability assistant for a live brokerage portfolio."
                     )
                     constraints = (
-                        "Keep each response to 50–100 words. Short sentences, no long paragraphs. "
-                        "Educational information only; do not provide individualized investment advice. You are not an RIA. "
-                        "If the user wants more, invite them to request an expanded explanation."
+                        "Avoid markdown formatting: no bullets, asterisks, or code blocks. Plain text only. "
+                        "Be conversational. Use 1–3 short sentences per turn. Offer to expand if the user asks. "
+                        "Educational information only; do not provide individualized investment advice. You are not an RIA."
                     )
 
                     # Include portfolio holdings/notes context

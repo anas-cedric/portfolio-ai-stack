@@ -42,11 +42,15 @@ export type ExplainabilityChatProps = {
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-function limitWords(text: string, maxWords = 100): string {
-  const words = text.trim().split(/\s+/);
-  if (words.length <= maxWords) return text.trim();
-  const trimmed = words.slice(0, maxWords).join(" ");
-  return trimmed + "… If you want more detail, ask me to expand.";
+function toPlainText(text: string): string {
+  if (!text) return "";
+  let s = text;
+  s = s.replace(/\*\*/g, ""); // remove bold markers
+  s = s.replace(/^[\-\*•]\s+/gm, ""); // remove bullets at line start
+  s = s.replace(/`+/g, ""); // remove code ticks
+  s = s.replace(/^#{1,6}\s*/gm, ""); // remove headings
+  s = s.replace(/[_]{1,3}([^_]+)[_]{1,3}/g, "$1"); // remove underscores formatting
+  return s.trim();
 }
 
 export default function ExplainabilityChat({
@@ -91,7 +95,7 @@ export default function ExplainabilityChat({
 
   useEffect(() => {
     if (messages.length === 0) {
-      const intro = "Explain any position, pending orders, or cash level in 50–100 words. Ask if the user wants more detail.";
+      const intro = "Ask about any holding, pending orders, or cash. I’ll keep it concise and explain in small chunks. Ask for more if you want detail.";
       const initial = { role: "assistant" as const, content: intro };
       setMessages([initial]);
       setRawHistory([initial]);
@@ -113,10 +117,10 @@ export default function ExplainabilityChat({
         "You are an explainability assistant for a live brokerage portfolio.",
         "Use the provided account_context (holdings, cash, portfolio_value, open_orders, status).",
         "Reflect pending trades and executed positions if present.",
-        "Keep each response to 50–100 words. No long paragraphs. Short, clear sentences.",
-        "If the user wants more, ask if they would like to expand or dive deeper.",
+        "Avoid markdown formatting: no bullets, asterisks, or code blocks. Plain text only.",
+        "Be conversational. Use 1–3 short sentences per turn. Offer to expand if the user wants more.",
         "Do not provide individualized investment advice. Educational information only.",
-        "You are not an RIA. Include a brief disclaimer if advice is implied.",
+        "You are not an RIA. If advice is implied, include a brief disclaimer.",
       ].join(" \n");
 
       // Build an updated_portfolio payload for backend from holdings, if available
@@ -163,7 +167,7 @@ export default function ExplainabilityChat({
       }
 
       let assistantTextRaw = typeof data.response === "string" ? data.response : JSON.stringify(data.response);
-      const assistantText = limitWords(assistantTextRaw, 50);
+      const assistantText = toPlainText(assistantTextRaw);
       setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
       setRawHistory((prev) => [...prev, { role: "assistant", content: assistantTextRaw }]);
     } catch (err: any) {
