@@ -212,6 +212,18 @@ function PortfolioQuizContent() {
     
   return (
     <div className={pageContainerClass}>
+      {/* Top-left logo for welcome/stepOne to match home page */}
+      {(currentStep === 'welcome' || currentStep === 'stepOne') && (
+        <div className="absolute top-8 left-8 flex items-center space-x-3">
+          <Image 
+            src="/images/cedric-logo-new.png" 
+            alt="Cedric" 
+            width={120} 
+            height={120}
+          />
+        </div>
+      )}
+
       {currentStep !== 'results' && currentStep !== 'questionnaire' && (
         <div 
           className="absolute flex flex-col items-start gap-12 w-[616px] bg-white/12 border border-white/8 rounded-[24px] backdrop-blur-[60px] p-10"
@@ -221,31 +233,7 @@ function PortfolioQuizContent() {
             boxSizing: 'border-box'
           }}
         >
-          {/* Top Section */}
-          <div className="flex flex-row justify-between items-center w-full">
-            {/* Logo */}
-            <div className="flex items-center justify-center">
-              <Image 
-                src="/images/cedric-logo-new.png" 
-                alt="Cedric" 
-                width={100} 
-                height={100}
-              />
-            </div>
-            
-            {/* User info and logout */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-white/80">
-                {user.given_name || user.email}
-              </span>
-              <button
-                onClick={() => { window.location.href = '/api/auth/logout'; }}
-                className="text-white/60 hover:text-white/80 text-sm transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
+          {/* Card content begins */}
 
           {/* Main Content */}
           <div className="flex flex-col items-center w-full">

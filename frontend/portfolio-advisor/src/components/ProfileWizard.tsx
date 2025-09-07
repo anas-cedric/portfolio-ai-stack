@@ -189,14 +189,14 @@ const ProfileWizard: React.FC<ProfileWizardProps> = ({
   const isCurrentQuestionAnswered = answers[currentQuestion.id] !== undefined;
 
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center clouds-bg py-8">
-      {/* Centered Logo Above Questionnaire */}
-      <div className="flex justify-center mb-8">
+    <div className="relative w-full h-screen overflow-hidden py-4 px-4 flex flex-col items-center justify-center">
+      {/* Top-left Logo (match home page positioning) */}
+      <div className="absolute top-8 left-8 flex items-center space-x-3">
         <Image 
           src="/images/cedric-logo-new.png" 
           alt="Cedric" 
-          width={200} 
-          height={200}
+          width={120} 
+          height={120}
         />
       </div>
 
