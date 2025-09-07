@@ -42,7 +42,7 @@ export type ExplainabilityChatProps = {
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-function limitWords(text: string, maxWords = 50): string {
+function limitWords(text: string, maxWords = 100): string {
   const words = text.trim().split(/\s+/);
   if (words.length <= maxWords) return text.trim();
   const trimmed = words.slice(0, maxWords).join(" ");
@@ -62,6 +62,8 @@ export default function ExplainabilityChat({
   userEmail,
 }: ExplainabilityChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Raw, untrimmed history for backend context
+  const [rawHistory, setRawHistory] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string>("");
@@ -89,8 +91,10 @@ export default function ExplainabilityChat({
 
   useEffect(() => {
     if (messages.length === 0) {
-      const intro = "Explain any position, pending orders, or cash level in under 50 words. Ask if the user wants more detail.";
-      setMessages([{ role: "assistant", content: intro }]);
+      const intro = "Explain any position, pending orders, or cash level in 50–100 words. Ask if the user wants more detail.";
+      const initial = { role: "assistant" as const, content: intro };
+      setMessages([initial]);
+      setRawHistory([initial]);
     }
   }, []);
 
@@ -100,6 +104,7 @@ export default function ExplainabilityChat({
 
     const newUserMsg: ChatMessage = { role: "user", content: input.trim() };
     setMessages((prev) => [...prev, newUserMsg]);
+    setRawHistory((prev) => [...prev, newUserMsg]);
     setInput("");
     setIsLoading(true);
 
@@ -108,11 +113,29 @@ export default function ExplainabilityChat({
         "You are an explainability assistant for a live brokerage portfolio.",
         "Use the provided account_context (holdings, cash, portfolio_value, open_orders, status).",
         "Reflect pending trades and executed positions if present.",
-        "Strictly limit each response to 50 words or fewer. No long paragraphs. Short, clear sentences.",
+        "Keep each response to 50–100 words. No long paragraphs. Short, clear sentences.",
         "If the user wants more, ask if they would like to expand or dive deeper.",
         "Do not provide individualized investment advice. Educational information only.",
         "You are not an RIA. Include a brief disclaimer if advice is implied.",
       ].join(" \n");
+
+      // Build an updated_portfolio payload for backend from holdings, if available
+      const updatedPortfolio = holdings ? {
+        holdings: [
+          ...(holdings.positions || []).map((p) => ({
+            ticker: p.symbol,
+            name: p.symbol,
+            value: Number(p.market_value) || 0,
+            percentage: Number(p.percent) || 0,
+          })),
+          {
+            ticker: 'CASH',
+            name: 'Cash',
+            value: Number(holdings.cash) || 0,
+            percentage: Number(holdings.cash_percent) || 0,
+          }
+        ]
+      } : undefined;
 
       const resp = await fetch("/api/portfolio-chat", {
         method: "POST",
@@ -123,11 +146,13 @@ export default function ExplainabilityChat({
         body: JSON.stringify({
           conversation_id: conversationId,
           user_message: newUserMsg.content,
-          conversation_history: messages.map((m) => ({ role: m.role, content: m.content })),
+          // Send untrimmed message history to backend for better context
+          conversation_history: rawHistory.map((m) => ({ role: m.role, content: m.content })),
           metadata: {
             system_instructions: systemInstructions,
             account_context: contextSummary,
             conversation_state: 'complete',
+            updated_portfolio: updatedPortfolio,
           },
         }),
       });
@@ -137,10 +162,10 @@ export default function ExplainabilityChat({
         setConversationId(data.conversation_id);
       }
 
-      let assistantText = typeof data.response === "string" ? data.response : JSON.stringify(data.response);
-      assistantText = limitWords(assistantText, 50);
-
+      let assistantTextRaw = typeof data.response === "string" ? data.response : JSON.stringify(data.response);
+      const assistantText = limitWords(assistantTextRaw, 50);
       setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
+      setRawHistory((prev) => [...prev, { role: "assistant", content: assistantTextRaw }]);
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
@@ -154,7 +179,7 @@ export default function ExplainabilityChat({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Explainability Chat</CardTitle>
+        <CardTitle>Ask Cedric about your portfolio</CardTitle>
       </CardHeader>
       <CardContent>
         {!enabled ? (
@@ -196,6 +221,9 @@ export default function ExplainabilityChat({
                 Send
               </Button>
             </form>
+            <div className="mt-2 text-[11px] text-[#00121F]/50 text-center">
+              Educational only. Not investment advice. Cedric is not a registered investment advisor.
+            </div>
           </div>
         )}
       </CardContent>

@@ -33,6 +33,8 @@ export default function ChatInterface({
   onPortfolioUpdate
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]); 
+  // Keep a full copy of history for backend context (untrimmed)
+  const [rawHistory, setRawHistory] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false); 
   const [isUpdatingPortfolio, setIsUpdatingPortfolio] = useState(false);
@@ -47,13 +49,10 @@ export default function ChatInterface({
     setLocalUserPreferences(userPreferences);
     if (portfolioData && messages.length === 0) {
         if (portfolioData) {
-          const initialAssistantMsg = `Here’s your allocation. I’ll keep answers under 50 words. Ask for more if you want detail.`;
-          setMessages([
-            {
-              content: initialAssistantMsg,
-              role: 'assistant'
-            }
-          ]);
+          const initialAssistantMsg = `Here’s your allocation. I’ll keep answers within 50–100 words. Ask for more if you want detail.`;
+          const initial = { content: initialAssistantMsg, role: 'assistant' as const };
+          setMessages([initial]);
+          setRawHistory([initial]);
         }
     }
   }, [portfolioData, userPreferences]);
@@ -75,7 +74,7 @@ export default function ChatInterface({
   }, [messages]);
 
 
-  const limitWords = (text: string, maxWords = 50) => {
+  const limitWords = (text: string, maxWords = 100) => {
     const words = text.trim().split(/\s+/);
     if (words.length <= maxWords) return text.trim();
     return words.slice(0, maxWords).join(' ') + '… If you want more detail, ask me to expand.';
@@ -93,19 +92,22 @@ export default function ChatInterface({
     };
     
     setMessages(prev => [...prev, newUserMessage]);
+    setRawHistory(prev => [...prev, newUserMessage]);
     setInput('');
     setSuggestions([]);
     setIsLoading(true);
     
     try {
+      const historyForSend = [...rawHistory, newUserMessage];
       const response = await axios.post(`/api/portfolio-chat`, {
         conversation_id: conversationId,
         user_message: messageContent,
-        conversation_history: messages.map(m => ({ role: m.role, content: m.content })),
+        // Send untrimmed history for better context (include the latest user msg)
+        conversation_history: historyForSend.map(m => ({ role: m.role, content: m.content })),
         metadata: {
           conversation_state: 'complete',
           updated_portfolio: portfolioData,
-          system_instructions: `You are a professional wealth assistant. Keep each response under 50 words. Avoid long paragraphs. Use short sentences. If the user wants more, ask if they would like to expand. Provide educational context, not individualized advice. Focus on allocation rationale and simple explanations.`
+          system_instructions: `You are a professional wealth assistant. Keep each response within 50–100 words. Avoid long paragraphs. Use short sentences. If the user wants more, ask if they would like to expand. Provide educational context, not individualized advice. Focus on allocation rationale and simple explanations.`
         }
       }, {
         headers: {
@@ -122,6 +124,9 @@ export default function ChatInterface({
       
       const newHistory = data.conversation_history || [];
       if (newHistory.length > 0) {
+        // Keep raw history unmodified
+        setRawHistory(newHistory.map((m: any) => ({ content: m.content, role: m.role })));
+        // Display trimmed versions for UI
         setMessages(newHistory.map((m: any) => ({ content: limitWords(m.content), role: m.role })));
       } else {
         const assistantContentRaw = typeof data.response === 'string' ? data.response : JSON.stringify(data.response);
@@ -131,6 +136,7 @@ export default function ChatInterface({
           role: 'assistant'
         };
         setMessages(prev => [...prev, newAssistantMessage]);
+        setRawHistory(prev => [...prev, { role: 'assistant', content: assistantContentRaw }]);
       }
       
       if (data.updated_portfolio) {

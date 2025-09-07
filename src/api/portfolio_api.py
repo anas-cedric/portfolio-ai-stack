@@ -818,34 +818,70 @@ async def process_portfolio_chat(
                             response_message = FinancialPrompts.get_refinement_ack_prompt(ticker, change_pct)
                             next_state = "generate"
                 else:
-                    # Explanation branch
+                    # Explanation branch using chat-completions for full conversational context
+                    # Build system instructions with compliance constraints and context
+                    base_instructions = metadata.get("system_instructions") or (
+                        "You are an explainability assistant for a live brokerage portfolio."
+                    )
+                    constraints = (
+                        "Keep each response to 50–100 words. Short sentences, no long paragraphs. "
+                        "Educational information only; do not provide individualized investment advice. You are not an RIA. "
+                        "If the user wants more, invite them to request an expanded explanation."
+                    )
+
+                    # Include portfolio holdings/notes context
                     holdings_json_str = json.dumps(updated_portfolio.get("holdings", []))
                     notes = updated_portfolio.get("notes")
-                    expl_prompt = FinancialPrompts.get_allocation_explanation_prompt(user_message, holdings_json_str, notes)
+                    portfolio_ctx = f"Holdings (JSON): {holdings_json_str}\nNotes: {notes}"
 
-                    # Include account context (holdings/cash/open orders/status) if provided by frontend metadata
+                    # Include account context if present
+                    account_context = None
                     try:
                         account_context = metadata.get("account_context")
                     except Exception:
                         account_context = None
-                    if account_context:
+                    if account_context is not None:
                         try:
-                            ctx_str = json.dumps(account_context)
+                            account_ctx_str = json.dumps(account_context)
                         except Exception:
-                            ctx_str = str(account_context)
-                        expl_prompt += f"\n\nAdditional account context (JSON): {ctx_str}\nUse this context (positions, cash, open orders, account status) to tailor explanations."
+                            account_ctx_str = str(account_context)
+                        account_ctx_line = f"Account context (JSON): {account_ctx_str}"
+                    else:
+                        account_ctx_line = ""
 
-                    # Reinforce brevity and compliance
-                    expl_prompt += "\n\nConstraints: Keep your response to 50 words or fewer. Short sentences, no long paragraphs. Educational information only; do not provide individualized investment advice. You are not an RIA. If the user asks for more, invite them to request an expanded explanation."
+                    combined_system = "\n".join([base_instructions, constraints, portfolio_ctx, account_ctx_line]).strip()
 
-                    # Get system instructions from metadata if provided by frontend
-                    system_instructions = metadata.get("system_instructions")
-                    model_resp = await openai_client.generate_text(
-                        expl_prompt,
-                        system_instruction=system_instructions,
-                        max_output_tokens=1024
-                    )
-                    response_message = model_resp.get("text", "") if isinstance(model_resp, dict) else str(model_resp)
+                    # Prepare chat message history (limit to recent turns for token efficiency)
+                    history = conversation_history or []
+                    recent = history[-12:] if len(history) > 12 else history
+                    chat_messages = [
+                        {"role": m.get("role", "user"), "content": m.get("content", "")} for m in recent
+                    ]
+                    # Append the latest user message
+                    chat_messages.append({"role": "user", "content": user_message})
+
+                    try:
+                        model_resp = await openai_client.generate_chat_completion(
+                            messages=chat_messages,
+                            system_instruction=combined_system,
+                            max_output_tokens=512,
+                            temperature=0.5,
+                        )
+                        response_message = model_resp.get("text", "") if isinstance(model_resp, dict) else str(model_resp)
+                    except Exception as e:
+                        logger.error(f"Chat completion failed, falling back to text generation: {e}")
+                        fallback_prompt = (
+                            f"{combined_system}\n\nConversation so far (most recent last):\n" +
+                            "\n".join([f"- {m['role']}: {m['content']}" for m in chat_messages]) +
+                            f"\n\nUser question: {user_message}\nAnswer:"
+                        )
+                        model_resp = await openai_client.generate_text(
+                            fallback_prompt,
+                            system_instruction=None,
+                            max_output_tokens=512,
+                        )
+                        response_message = model_resp.get("text", "") if isinstance(model_resp, dict) else str(model_resp)
+
                     next_state = "complete"
 
         # --- State: Generate Portfolio ---
