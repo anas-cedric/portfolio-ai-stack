@@ -7,9 +7,11 @@ import {
   generateClientOrderId,
   getLatestTrades,
   calculateNotionalAmount,
+  getPositions,
+  getOrders,
   type NotionalOrder
 } from "@/lib/alpacaBroker";
-import { logActivity, logOrderSubmission } from "@/lib/supabase";
+import { logActivity, logOrderSubmission, getActivitiesByUser } from "@/lib/supabase";
 
 type Weight = { 
   symbol: string; 
@@ -112,6 +114,86 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // ---------------- Idempotency & duplicate-execution guards ----------------
+    // 0) If positions already exist, assume portfolio already executed — skip funding and orders
+    try {
+      const existingPositions = await getPositions(accountId);
+      if (Array.isArray(existingPositions) && existingPositions.length > 0) {
+        await logActivity(
+          user.id,
+          'info',
+          'Portfolio already executed',
+          'Detected existing positions; skipping duplicate funding and orders.',
+          {
+            alpaca_account_id: accountId,
+            positions_detected: existingPositions.length,
+            internal: true
+          },
+          accountId
+        );
+        return NextResponse.json({
+          success: true,
+          accountId,
+          skipped: true,
+          reason: 'positions_exist',
+          positions: existingPositions.length,
+          message: 'Portfolio already executed. Skipping.',
+        });
+      }
+    } catch {}
+
+    // 1) If there are open orders, treat as in-progress and avoid duplicates
+    try {
+      const openOrders = await getOrders(accountId, 'open');
+      if (Array.isArray(openOrders) && openOrders.length > 0) {
+        await logActivity(
+          user.id,
+          'info',
+          'Portfolio execution in progress',
+          'Open orders detected; skipping duplicate order placement.',
+          {
+            alpaca_account_id: accountId,
+            open_orders: openOrders.length,
+            internal: true
+          },
+          accountId
+        );
+        return NextResponse.json({
+          success: true,
+          accountId,
+          skipped: true,
+          reason: 'orders_in_progress',
+          openOrders: openOrders.length,
+          message: 'Open orders in progress. Skipping duplicate execution.',
+        });
+      }
+    } catch {}
+
+    // 2) If Supabase shows a prior trade_executed activity, skip
+    try {
+      const acts = await getActivitiesByUser(user.id, 10);
+      if (Array.isArray(acts) && acts.some((a: any) => a?.type === 'trade_executed' || a?.meta?.trades_executed === true)) {
+        await logActivity(
+          user.id,
+          'info',
+          'Portfolio already executed (activity)',
+          'Found prior execution activity; skipping duplicate execution.',
+          {
+            alpaca_account_id: accountId,
+            internal: true
+          },
+          accountId
+        );
+        return NextResponse.json({
+          success: true,
+          accountId,
+          skipped: true,
+          reason: 'prior_activity_detected',
+          message: 'Prior execution activity found. Skipping.',
+        });
+      }
+    } catch {}
+
     // Capture pre-funding snapshots
     const preBuyingPower = safeParseNumber(account.buying_power);
     const preCash = safeParseNumber(account.cash);
@@ -122,11 +204,12 @@ export async function POST(req: NextRequest) {
     let fundingAttempted = false;
     let fundingSucceeded = false;
 
-    // 2. Fund the account (journal from firm account to user account)
+    // 2. Fund the account (journal from firm account to user account) if needed
     const firmAccountId = process.env.ALPACA_FIRM_ACCOUNT_ID;
     console.log(`Funding plan: $${totalInvestment} from firm account ${firmAccountId ?? '(not configured)'}`);
     
-    if (firmAccountId) {
+    const needsFunding = !Number.isFinite(preBuyingPower) || preBuyingPower < totalInvestment * 0.9;
+    if (firmAccountId && needsFunding) {
       fundingAttempted = true;
       try {
         await createJournalUSD(firmAccountId, accountId, totalInvestment);
@@ -178,9 +261,11 @@ export async function POST(req: NextRequest) {
       await logActivity(
         user.id,
         'warning',
-        'Funding skipped',
-        'Firm account ID not configured on server. Attempting to place orders with existing buying power.',
-        { alpaca_account_id: accountId },
+        needsFunding ? 'Funding skipped' : 'Funding not required',
+        needsFunding
+          ? 'Firm account ID not configured on server. Attempting to place orders with existing buying power.'
+          : 'Detected sufficient buying power/cash; funding not required.',
+        { alpaca_account_id: accountId, pre_buying_power: preBuyingPower, pre_cash: preCash },
         accountId
       );
     }
