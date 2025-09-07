@@ -69,7 +69,8 @@ export async function POST(req: NextRequest) {
           status_updated: true,
           buying_power: account.buying_power,
           cash: account.cash,
-          portfolio_value: account.portfolio_value
+          portfolio_value: account.portfolio_value,
+          internal: true
         },
         accountId
       );

@@ -153,7 +153,8 @@ export async function POST(req: NextRequest) {
             post_buying_power: postBuyingPower,
             pre_cash: preCash,
             post_cash: postCash,
-            bp_poll_attempts: bpPollAttempts
+            bp_poll_attempts: bpPollAttempts,
+            internal: true
           },
           accountId
         );

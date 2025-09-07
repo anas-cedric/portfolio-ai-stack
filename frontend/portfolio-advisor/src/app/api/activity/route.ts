@@ -22,9 +22,23 @@ export async function GET(request: NextRequest) {
     // Fetch activities for this user
     const activities = await getActivitiesByUser(user.id, limit);
 
+    // Filter out internal operational events from user-facing feed
+    const HIDE_TITLES = new Set([
+      'Account funded successfully',
+      'Account is now active and ready for trading',
+      'Account approved and funding in progress',
+      'Portfolio strategy saved'
+    ]);
+
+    const visibleActivities = (activities || []).filter((activity: any) => {
+      if (activity?.meta?.internal === true) return false;
+      if (activity?.title && HIDE_TITLES.has(activity.title)) return false;
+      return true;
+    });
+
     return NextResponse.json({
       success: true,
-      activities: activities.map(activity => ({
+      activities: visibleActivities.map(activity => ({
         id: activity.id,
         type: activity.type,
         title: activity.title,

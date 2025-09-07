@@ -235,7 +235,8 @@ export async function POST(req: NextRequest) {
       {
         weights: weights,
         total_investment: totalInvestment,
-        pending_execution: true
+        pending_execution: true,
+        internal: true
       },
       accountId
     );

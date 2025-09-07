@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, MessageCircle, TrendingUp, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import PortfolioDonutChart from '@/components/PortfolioDonutChart';
  
 
 type Activity = {
@@ -39,6 +40,39 @@ type Proposal = {
   alpacaAccountId?: string;
 };
 
+type Holding = {
+  symbol: string;
+  qty: number;
+  market_value: number;
+  percent: number;
+};
+
+type HoldingsResponse = {
+  accountId: string;
+  cash: number;
+  portfolio_value: number;
+  positions: Holding[];
+  cash_percent: number;
+  as_of: string;
+};
+
+type OrdersResponse = {
+  accountId: string;
+  open_count: number;
+  open_orders: Array<{
+    id: string;
+    client_order_id?: string;
+    symbol: string;
+    notional?: string;
+    qty?: string;
+    side: string;
+    type: string;
+    status: string;
+    created_at: string;
+  }>;
+  as_of: string;
+};
+
 const ActivityIcon = ({ type }: { type: Activity['type'] }) => {
   const iconClass = "w-4 h-4";
   
@@ -68,6 +102,10 @@ function DashboardContent() {
   const [portfolioState, setPortfolioState] = useState<PortfolioState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [holdings, setHoldings] = useState<HoldingsResponse | null>(null);
+  const [isHoldingsLoading, setIsHoldingsLoading] = useState(false);
+  const [orders, setOrders] = useState<OrdersResponse | null>(null);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
   const eventSrcRef = useRef<EventSource | null>(null);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -222,6 +260,46 @@ function DashboardContent() {
 
   // Removed 15s polling; SSE will drive updates
 
+  const fetchHoldings = async (accountId: string) => {
+    try {
+      setIsHoldingsLoading(true);
+      const res = await fetch('/api/portfolio/holdings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId }),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHoldings(data);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch holdings:', e);
+    } finally {
+      setIsHoldingsLoading(false);
+    }
+  };
+
+  const fetchOrders = async (accountId: string) => {
+    try {
+      setIsOrdersLoading(true);
+      const res = await fetch('/api/portfolio/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId }),
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrders(data);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch orders:', e);
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  };
+
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
@@ -328,6 +406,11 @@ function DashboardContent() {
         if (nextState.status === 'ACTIVE' && !nextState.hasExecutedTrades && nextState.accountId && nextState.weights && nextState.weights.length > 0) {
           await executePortfolioTrades(nextState);
         }
+        // If trades have executed, fetch holdings summary and any open orders
+        if (nextState.hasExecutedTrades && nextState.accountId) {
+          await fetchHoldings(nextState.accountId);
+          await fetchOrders(nextState.accountId);
+        }
       } else {
         // No latest meta - attempt to derive minimal state from proposals/previous state
         const plan = proposalsData?.proposals?.[0]?.plan;
@@ -426,6 +509,10 @@ function DashboardContent() {
       if (response.ok) {
         // Refresh to show executed trades
         await fetchDashboardData();
+        if (s.accountId) {
+          await fetchHoldings(s.accountId);
+          await fetchOrders(s.accountId);
+        }
       }
     } catch (error) {
       console.error('Failed to execute portfolio trades:', error);
@@ -562,50 +649,121 @@ function DashboardContent() {
                     </div>
                   </div>
                 )}
-                
-                <div className="text-sm text-[#00121F]/60">
-                  Simulated paper trading portfolio • Educational purposes only
-                </div>
               </CardContent>
             </Card>
 
-            {/* Activity Feed */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {activities.length === 0 ? (
-                  <div className="text-center py-8 text-[#00121F]/60">
-                    <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No activity yet. Approve a portfolio to get started!</p>
-                  </div>
-                ) : (
-                  activities.map((activity) => (
-                    <div key={activity.id} className="border border-[#00121F]/10 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="mt-1">
-                          <ActivityIcon type={activity.type} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-medium text-[#00121F] mb-1">
-                            {activity.title}
+            {/* Holdings and Allocation */}
+            {portfolioState?.hasExecutedTrades && (
+              (() => {
+                const showPending = (!holdings || holdings.positions.length === 0) && !!orders && orders.open_count > 0;
+                if (showPending) {
+                  const palette = ['#2563EB', '#16A34A', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6', '#06B6D4', '#D946EF', '#F97316', '#84CC16'];
+                  const weights = portfolioState.weights || [];
+                  const nonCash = weights.filter(w => w.symbol !== 'CASH');
+                  const sumNonCash = nonCash.reduce((s, w) => s + (w.weight || 0), 0);
+                  const cashWeight = Math.max(0, 100 - sumNonCash);
+                  const chartData = [
+                    ...nonCash.map((w, i) => ({ name: w.symbol, value: w.weight, color: palette[i % palette.length] })),
+                    { name: 'Cash', value: cashWeight, color: '#9CA3AF' }
+                  ];
+                  return (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5" />
+                          Pending Portfolio
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {isOrdersLoading && (
+                          <div className="flex items-center gap-2 text-sm text-[#00121F]/60 mb-2">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Checking pending orders...
                           </div>
-                          {activity.body && (
-                            <div className="text-sm text-[#00121F]/70 mb-2">
-                              {activity.body}
+                        )}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="h-[320px]">
+                            <PortfolioDonutChart data={chartData} showCenterText={false} />
+                          </div>
+                          <div className="text-sm text-[#00121F]/70 space-y-2">
+                            <div>Orders submitted and pending fills. Once positions are established, this will switch to your actual holdings.</div>
+                            <div className="text-[#00121F]/60">Open orders: {orders?.open_count ?? 0} • As of {orders?.as_of ? new Date(orders.as_of).toLocaleString() : '-'}</div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+
+                // Show actual holdings
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5" />
+                        Current Holdings
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {isHoldingsLoading && (
+                        <div className="flex items-center gap-2 text-sm text-[#00121F]/60 mb-2">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Updating holdings...
+                        </div>
+                      )}
+                      {holdings ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* Holdings table */}
+                          <div>
+                            <div className="text-sm text-[#00121F]/60 mb-2">As of {new Date(holdings.as_of).toLocaleString()}</div>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-left text-[#00121F]/60">
+                                    <th className="py-2">Symbol</th>
+                                    <th className="py-2">Qty</th>
+                                    <th className="py-2">Market Value</th>
+                                    <th className="py-2">% of Portfolio</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {holdings.positions.map((p) => (
+                                    <tr key={p.symbol} className="border-t">
+                                      <td className="py-2 font-medium">{p.symbol}</td>
+                                      <td className="py-2">{p.qty}</td>
+                                      <td className="py-2">${p.market_value.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                                      <td className="py-2">{p.percent.toFixed(2)}%</td>
+                                    </tr>
+                                  ))}
+                                  <tr className="border-t">
+                                    <td className="py-2 font-medium">Cash</td>
+                                    <td className="py-2">—</td>
+                                    <td className="py-2">${holdings.cash.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                                    <td className="py-2">{holdings.cash_percent.toFixed(2)}%</td>
+                                  </tr>
+                                </tbody>
+                              </table>
                             </div>
-                          )}
-                          <div className="text-xs text-[#00121F]/50">
-                            {new Date(activity.timestamp).toLocaleString()}
+                          </div>
+
+                          {/* Pie chart */}
+                          <div className="h-[320px]">
+                            {(() => {
+                              const palette = ['#2563EB', '#16A34A', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6', '#06B6D4', '#D946EF', '#F97316', '#84CC16'];
+                              const data = [
+                                ...holdings.positions.map((p, i) => ({ name: p.symbol, value: p.percent, color: palette[i % palette.length] })),
+                                { name: 'Cash', value: holdings.cash_percent, color: '#9CA3AF' }
+                              ];
+                              return <PortfolioDonutChart data={data} showCenterText={false} />;
+                            })()}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+                      ) : (
+                        <div className="text-sm text-[#00121F]/60">No holdings yet. Your portfolio will appear here after trade execution.</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })()
+            )}
 
             {/* Chat Interface Placeholder */}
             <Card>
