@@ -305,10 +305,11 @@ function DashboardContent() {
       setIsLoading(true);
       setError(null);
 
-      // Fetch activities and proposals in parallel
-      const [activitiesRes, proposalsRes] = await Promise.all([
+      // Fetch activities, proposals, and live status in parallel
+      const [activitiesRes, proposalsRes, statusRes] = await Promise.all([
         fetch('/api/activity', { credentials: 'include' }),
-        fetch('/api/cedric/proposals', { credentials: 'include' })
+        fetch('/api/cedric/proposals', { credentials: 'include' }),
+        fetch('/api/portfolio/status/check', { method: 'POST', credentials: 'include' })
       ]);
 
       if (!activitiesRes.ok || !proposalsRes.ok) {
@@ -317,6 +318,10 @@ function DashboardContent() {
 
       const activitiesData = await activitiesRes.json();
       const proposalsData = await proposalsRes.json();
+      let statusData: any = null;
+      try {
+        statusData = statusRes.ok ? await statusRes.json() : null;
+      } catch {}
 
       setActivities(activitiesData.activities || []);
       setProposals(proposalsData.proposals || []);
@@ -332,6 +337,14 @@ function DashboardContent() {
           weights: meta.target_weights || meta.weights,
           hasExecutedTrades: meta.trades_executed || false
         };
+
+        // Override with live status info when available
+        if (statusData?.currentStatus) {
+          nextState.status = statusData.currentStatus as AccountStatus;
+        }
+        if (statusData?.accountId && !nextState.accountId) {
+          nextState.accountId = statusData.accountId as string;
+        }
 
         // Fallbacks: scan activities for missing fields, then previous state, then proposals for weights
         const acts: Activity[] = activitiesData.activities || [];
@@ -437,6 +450,14 @@ function DashboardContent() {
           weights: (portfolioState?.weights || weightsFromProposals) as Array<{ symbol: string; weight: number }> | undefined,
           hasExecutedTrades: portfolioState?.hasExecutedTrades || false
         };
+
+        // Override with live status info when available
+        if (statusData?.currentStatus) {
+          derivedState.status = statusData.currentStatus as AccountStatus;
+        }
+        if (statusData?.accountId && !derivedState.accountId) {
+          derivedState.accountId = statusData.accountId as string;
+        }
 
         setPortfolioState(derivedState);
       }
