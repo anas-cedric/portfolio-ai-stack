@@ -651,25 +651,78 @@ function DashboardContent() {
                   </div>
                 )}
                 
-                {/* Portfolio Weights Preview */}
-                {portfolioState?.weights && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-[#00121F]/80">Target Allocation:</div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {portfolioState.weights.slice(0, 6).map((weight) => (
-                        <div key={weight.symbol} className="flex justify-between p-2 bg-slate-50 rounded">
-                          <span className="font-medium">{weight.symbol}</span>
-                          <span>{weight.weight}%</span>
-                        </div>
-                      ))}
-                      {portfolioState.weights.length > 6 && (
-                        <div className="text-[#00121F]/60 text-center col-span-2">
-                          +{portfolioState.weights.length - 6} more holdings
-                        </div>
-                      )}
+                {/* Allocation Preview (pending vs current vs target) */}
+                {(() => {
+                  const hasHoldings = !!(holdings && Array.isArray(holdings.positions) && holdings.positions.length > 0);
+                  const hasWeights = !!(portfolioState?.weights && portfolioState.weights.length > 0);
+                  if (!hasHoldings && !hasWeights) return null;
+
+                  const isPending = !hasHoldings && !!orders && (orders.open_count ?? 0) > 0;
+                  const label = isPending ? 'Pending Allocation' : (hasHoldings ? 'Current Allocation' : 'Target Allocation');
+
+                  let pairs: Array<{ name: string; value: number }> = [];
+                  if (hasHoldings) {
+                    pairs = [
+                      ...holdings!.positions.map((p) => ({ name: p.symbol, value: p.percent })),
+                      { name: 'Cash', value: holdings!.cash_percent }
+                    ];
+                  } else if (isPending && orders) {
+                    // Compute from open orders' notional relative to totalInvestment; include Cash as residual
+                    const ti = portfolioState?.totalInvestment || 10000;
+                    const map = new Map<string, number>();
+                    for (const o of orders.open_orders || []) {
+                      if (!o || !o.symbol || o.symbol === 'CASH') continue;
+                      const notional = o.notional ? Number(o.notional) : 0;
+                      if (!Number.isFinite(notional) || notional <= 0) continue;
+                      map.set(o.symbol, (map.get(o.symbol) || 0) + notional);
+                    }
+                    let sumPct = 0;
+                    pairs = Array.from(map.entries()).map(([sym, notional]) => {
+                      const pct = Math.max(0, (notional / ti) * 100);
+                      sumPct += pct;
+                      return { name: sym, value: pct };
+                    });
+                    const cashPct = Math.max(0, 100 - sumPct);
+                    pairs.push({ name: 'Cash', value: cashPct });
+                    if (pairs.length === 1) {
+                      // Fallback to target weights if orders had no notionals
+                      const nonCash = (portfolioState!.weights || []).filter((w) => w.symbol !== 'CASH');
+                      const sumNonCash = nonCash.reduce((s, w) => s + (w.weight || 0), 0);
+                      const cashWeight = Math.max(0, 100 - sumNonCash);
+                      pairs = [
+                        ...nonCash.map((w) => ({ name: w.symbol, value: w.weight })),
+                        { name: 'Cash', value: cashWeight }
+                      ];
+                    }
+                  } else if (hasWeights) {
+                    const nonCash = portfolioState!.weights!.filter((w) => w.symbol !== 'CASH');
+                    const sumNonCash = nonCash.reduce((s, w) => s + (w.weight || 0), 0);
+                    const cashWeight = Math.max(0, 100 - sumNonCash);
+                    pairs = [
+                      ...nonCash.map((w) => ({ name: w.symbol, value: w.weight })),
+                      { name: 'Cash', value: cashWeight }
+                    ];
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-[#00121F]/80">{label}:</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {pairs.slice(0, 6).map((item) => (
+                          <div key={item.name} className="flex justify-between p-2 bg-slate-50 rounded">
+                            <span className="font-medium">{item.name}</span>
+                            <span>{item.value.toFixed(2)}%</span>
+                          </div>
+                        ))}
+                        {pairs.length > 6 && (
+                          <div className="text-[#00121F]/60 text-center col-span-2">
+                            +{pairs.length - 6} more holdings
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </CardContent>
             </Card>
 
@@ -679,14 +732,33 @@ function DashboardContent() {
                 const showPending = (!holdings || holdings.positions.length === 0) && !!orders && orders.open_count > 0;
                 if (showPending) {
                   const palette = ['#2563EB', '#16A34A', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6', '#06B6D4', '#D946EF', '#F97316', '#84CC16'];
-                  const weights = portfolioState.weights || [];
-                  const nonCash = weights.filter(w => w.symbol !== 'CASH');
-                  const sumNonCash = nonCash.reduce((s, w) => s + (w.weight || 0), 0);
-                  const cashWeight = Math.max(0, 100 - sumNonCash);
-                  const chartData = [
-                    ...nonCash.map((w, i) => ({ name: w.symbol, value: w.weight, color: palette[i % palette.length] })),
-                    { name: 'Cash', value: cashWeight, color: '#9CA3AF' }
-                  ];
+                  const ti = portfolioState?.totalInvestment || 10000;
+                  const map = new Map<string, number>();
+                  for (const o of orders.open_orders || []) {
+                    if (!o || !o.symbol || o.symbol === 'CASH') continue;
+                    const notional = o.notional ? Number(o.notional) : 0;
+                    if (!Number.isFinite(notional) || notional <= 0) continue;
+                    map.set(o.symbol, (map.get(o.symbol) || 0) + notional);
+                  }
+                  let sumPct = 0;
+                  let chartData = Array.from(map.entries()).map(([sym, notional], i) => {
+                    const pct = Math.max(0, (notional / ti) * 100);
+                    sumPct += pct;
+                    return { name: sym, value: pct, color: palette[i % palette.length] };
+                  });
+                  const cashPct = Math.max(0, 100 - sumPct);
+                  chartData.push({ name: 'Cash', value: cashPct, color: '#9CA3AF' });
+                  if (chartData.length === 1) {
+                    // Fallback: use target weights if orders lack notional info
+                    const weights = portfolioState.weights || [];
+                    const nonCash = weights.filter(w => w.symbol !== 'CASH');
+                    const sumNonCash = nonCash.reduce((s, w) => s + (w.weight || 0), 0);
+                    const cashWeight = Math.max(0, 100 - sumNonCash);
+                    chartData = [
+                      ...nonCash.map((w, i) => ({ name: w.symbol, value: w.weight, color: palette[i % palette.length] })),
+                      { name: 'Cash', value: cashWeight, color: '#9CA3AF' }
+                    ];
+                  }
                   return (
                     <Card>
                       <CardHeader>
