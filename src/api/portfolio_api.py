@@ -855,7 +855,9 @@ async def process_portfolio_chat(
                     history = conversation_history or []
                     recent = history[-12:] if len(history) > 12 else history
                     chat_messages = [
-                        {"role": m.get("role", "user"), "content": m.get("content", "")} for m in recent
+                        ({"role": m.get("role", "user"), "content": m.get("content", "")} if isinstance(m, dict)
+                         else {"role": getattr(m, "role", "user"), "content": getattr(m, "content", "")})
+                        for m in recent
                     ]
                     # Append the latest user message
                     chat_messages.append({"role": "user", "content": user_message})
