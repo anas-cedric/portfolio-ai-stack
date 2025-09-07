@@ -9,6 +9,7 @@ import { Loader2, MessageCircle, TrendingUp, DollarSign, Clock, CheckCircle } fr
 import Link from 'next/link';
 import Image from 'next/image';
 import PortfolioDonutChart from '@/components/PortfolioDonutChart';
+import ExplainabilityChat from '@/components/ExplainabilityChat';
  
 
 type Activity = {
@@ -734,7 +735,7 @@ function DashboardContent() {
                   const palette = ['#2563EB', '#16A34A', '#F59E0B', '#EF4444', '#10B981', '#8B5CF6', '#06B6D4', '#D946EF', '#F97316', '#84CC16'];
                   const ti = portfolioState?.totalInvestment || 10000;
                   const map = new Map<string, number>();
-                  for (const o of orders.open_orders || []) {
+                  for (const o of (orders?.open_orders || [])) {
                     if (!o || !o.symbol || o.symbol === 'CASH') continue;
                     const notional = o.notional ? Number(o.notional) : 0;
                     if (!Number.isFinite(notional) || notional <= 0) continue;
@@ -746,18 +747,18 @@ function DashboardContent() {
                     sumPct += pct;
                     return { name: sym, value: pct, color: palette[i % palette.length] };
                   });
-                  const cashPct = Math.max(0, 100 - sumPct);
-                  chartData.push({ name: 'Cash', value: cashPct, color: '#9CA3AF' });
-                  if (chartData.length === 1) {
-                    // Fallback: use target weights if orders lack notional info
-                    const weights = portfolioState.weights || [];
-                    const nonCash = weights.filter(w => w.symbol !== 'CASH');
+                  if (chartData.length === 0) {
+                    const weights = portfolioState?.weights || [];
+                    const nonCash = weights.filter((w) => w.symbol !== 'CASH');
                     const sumNonCash = nonCash.reduce((s, w) => s + (w.weight || 0), 0);
                     const cashWeight = Math.max(0, 100 - sumNonCash);
                     chartData = [
                       ...nonCash.map((w, i) => ({ name: w.symbol, value: w.weight, color: palette[i % palette.length] })),
                       { name: 'Cash', value: cashWeight, color: '#9CA3AF' }
                     ];
+                  } else {
+                    const cashPct = Math.max(0, 100 - sumPct);
+                    chartData.push({ name: 'Cash', value: cashPct, color: '#9CA3AF' });
                   }
                   return (
                     <Card>
@@ -786,8 +787,7 @@ function DashboardContent() {
                     </Card>
                   );
                 }
-
-                // Show actual holdings
+                // Current Holdings
                 return (
                   <Card>
                     <CardHeader>
@@ -858,23 +858,39 @@ function DashboardContent() {
               })()
             )}
 
-            {/* Chat Interface Placeholder */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ask Cedric about your portfolio</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-[#00121F]/5 rounded-lg p-4 text-center">
-                  <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm text-[#00121F]/60 mb-4">
-                    Chat with Cedric about your investment strategy, market conditions, or portfolio performance.
-                  </p>
-                  <div className="text-xs text-[#00121F]/40">
-                    Coming soon: Real-time portfolio chat
-                  </div>
+            {/* Explainability Chat */}
+            {(() => {
+              const isActive = portfolioState?.status === 'ACTIVE';
+              const hasPending = (orders?.open_count ?? 0) > 0;
+              const enabled = !!(isActive && (hasPending || portfolioState?.hasExecutedTrades));
+              let reasonDisabled = '';
+              if (!enabled) {
+                if (!isActive) {
+                  if (portfolioState?.status === 'APPROVED') {
+                    reasonDisabled = 'Funding in progress. Chat will activate once orders are submitted.';
+                  } else {
+                    reasonDisabled = 'Awaiting account funding. Chat activates after funding and when trades are pending or executed.';
+                  }
+                } else if (!hasPending && !portfolioState?.hasExecutedTrades) {
+                  reasonDisabled = 'Preparing your orders. Chat will activate once trades are pending or executed.';
+                }
+              }
+              return (
+                <div className="mt-6">
+                  <ExplainabilityChat
+                    enabled={enabled}
+                    reasonDisabled={reasonDisabled}
+                    accountId={portfolioState?.accountId || null}
+                    status={portfolioState?.status || null}
+                    hasExecutedTrades={!!portfolioState?.hasExecutedTrades}
+                    holdings={holdings}
+                    orders={orders}
+                    userName={user?.given_name || user?.email || ''}
+                    userEmail={user?.email || ''}
+                  />
                 </div>
-              </CardContent>
-            </Card>
+              );
+            })()}
           </div>
         </div>
       </div>

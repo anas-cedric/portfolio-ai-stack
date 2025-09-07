@@ -47,12 +47,7 @@ export default function ChatInterface({
     setLocalUserPreferences(userPreferences);
     if (portfolioData && messages.length === 0) {
         if (portfolioData) {
-          const initialAssistantMsg = 
-            `I've carefully crafted a portfolio allocation that aligns with your risk profile and investment objectives. This recommendation reflects a balanced approach designed to help you achieve your long-term financial goals while managing risk appropriately.
-
-Your portfolio emphasizes diversification across multiple asset classes, with allocations strategically distributed to provide both growth potential and stability. The specific weightings have been calibrated based on your age, risk tolerance, and investment timeline.
-
-I'm here to discuss any aspects of this allocation with you. Whether you'd like to understand the reasoning behind certain holdings, explore adjustments to better match your preferences, or discuss how this portfolio might perform under different market conditions, please don't hesitate to ask. My goal is to ensure you feel completely confident in your investment strategy.`;
+          const initialAssistantMsg = `Here’s your allocation. I’ll keep answers under 50 words. Ask for more if you want detail.`;
           setMessages([
             {
               content: initialAssistantMsg,
@@ -80,6 +75,12 @@ I'm here to discuss any aspects of this allocation with you. Whether you'd like 
   }, [messages]);
 
 
+  const limitWords = (text: string, maxWords = 50) => {
+    const words = text.trim().split(/\s+/);
+    if (words.length <= maxWords) return text.trim();
+    return words.slice(0, maxWords).join(' ') + '… If you want more detail, ask me to expand.';
+  };
+
   const handleSubmit = async (e: FormEvent, suggestionText?: string) => {
     e.preventDefault();
     
@@ -104,20 +105,7 @@ I'm here to discuss any aspects of this allocation with you. Whether you'd like 
         metadata: {
           conversation_state: 'complete',
           updated_portfolio: portfolioData,
-          system_instructions: `You are a professional wealth manager having a conversation with your client. 
-          
-Key guidelines:
-- Respond in a warm, professional, and conversational tone
-- Write in complete paragraphs, not bullet points or lists
-- Focus on percentage allocations, not dollar amounts
-- Explain investment concepts in accessible terms
-- Show empathy and understanding of the client's financial goals
-- Be confident in your recommendations while remaining open to adjustments
-- Discuss risk, diversification, and long-term strategy
-- Avoid technical jargon unless explaining it clearly
-- Always maintain a human, personalized approach
-
-Remember: You're their trusted financial advisor, not a chatbot.`
+          system_instructions: `You are a professional wealth assistant. Keep each response under 50 words. Avoid long paragraphs. Use short sentences. If the user wants more, ask if they would like to expand. Provide educational context, not individualized advice. Focus on allocation rationale and simple explanations.`
         }
       }, {
         headers: {
@@ -134,9 +122,10 @@ Remember: You're their trusted financial advisor, not a chatbot.`
       
       const newHistory = data.conversation_history || [];
       if (newHistory.length > 0) {
-        setMessages(newHistory.map((m: any, idx: number) => ({ content: m.content, role: m.role })));
+        setMessages(newHistory.map((m: any) => ({ content: limitWords(m.content), role: m.role })));
       } else {
-        const assistantContent = typeof data.response === 'string' ? data.response : JSON.stringify(data.response);
+        const assistantContentRaw = typeof data.response === 'string' ? data.response : JSON.stringify(data.response);
+        const assistantContent = limitWords(assistantContentRaw);
         const newAssistantMessage: Message = {
           content: assistantContent,
           role: 'assistant'
@@ -259,7 +248,7 @@ Remember: You're their trusted financial advisor, not a chatbot.`
             message.role === 'user' 
               ? 'bg-[#00121F]/5 text-[#00121F]' 
               : 'text-[#00121F]'
-          }`;
+          } fade-in`;
           contentDiv.textContent = message.content;
           
           messageDiv.appendChild(contentDiv);

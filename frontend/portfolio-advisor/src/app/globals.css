@@ -219,3 +219,14 @@ input[type=number] {
     @apply bg-background text-foreground;
   }
 }
+
+/* Simple fade-in animation for chat bubbles and UI elements */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  opacity: 0;
+  animation: fadeInUp 220ms ease-out forwards;
+}

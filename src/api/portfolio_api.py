@@ -822,12 +822,28 @@ async def process_portfolio_chat(
                     holdings_json_str = json.dumps(updated_portfolio.get("holdings", []))
                     notes = updated_portfolio.get("notes")
                     expl_prompt = FinancialPrompts.get_allocation_explanation_prompt(user_message, holdings_json_str, notes)
+
+                    # Include account context (holdings/cash/open orders/status) if provided by frontend metadata
+                    try:
+                        account_context = metadata.get("account_context")
+                    except Exception:
+                        account_context = None
+                    if account_context:
+                        try:
+                            ctx_str = json.dumps(account_context)
+                        except Exception:
+                            ctx_str = str(account_context)
+                        expl_prompt += f"\n\nAdditional account context (JSON): {ctx_str}\nUse this context (positions, cash, open orders, account status) to tailor explanations."
+
+                    # Reinforce brevity and compliance
+                    expl_prompt += "\n\nConstraints: Keep your response to 50 words or fewer. Short sentences, no long paragraphs. Educational information only; do not provide individualized investment advice. You are not an RIA. If the user asks for more, invite them to request an expanded explanation."
+
                     # Get system instructions from metadata if provided by frontend
                     system_instructions = metadata.get("system_instructions")
                     model_resp = await openai_client.generate_text(
                         expl_prompt,
                         system_instruction=system_instructions,
-                        max_output_tokens=4096 # Substantially increase token limit for conversational responses
+                        max_output_tokens=1024
                     )
                     response_message = model_resp.get("text", "") if isinstance(model_resp, dict) else str(model_resp)
                     next_state = "complete"
