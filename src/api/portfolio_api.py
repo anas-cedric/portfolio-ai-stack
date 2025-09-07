@@ -1065,16 +1065,14 @@ Current Allocation: {json.dumps(current_allocations_dict)}
     prompt_messages.append({"role": "user", "content": "Based on our conversation, provide the final adjusted portfolio allocation as a JSON object."})
 
     try:
-        logger.info("Calling OpenAI to get adjusted allocation...")
-        response = await openai_client.chat.completions.create(
-            model="gpt-4o-mini", # Or your preferred model supporting JSON mode
+        logger.info("Calling OpenAI to get adjusted allocation via wrapper (model configurable)...")
+        model_resp = await openai_client.generate_chat_completion(
             messages=prompt_messages,
-            temperature=0.2, # Lower temperature for more deterministic output
-            response_format={"type": "json_object"}, # Request JSON output
-            max_tokens=4000  # Explicitly set a higher token limit for the response
+            system_instruction=None,
+            temperature=0.2,
+            max_output_tokens=4000
         )
-        
-        content = response.choices[0].message.content
+        content = model_resp.get("text") if isinstance(model_resp, dict) else str(model_resp)
         logger.info(f"OpenAI response received: {content}")
         
         if not content:
@@ -1120,6 +1118,7 @@ Current Allocation: {json.dumps(current_allocations_dict)}
             final_allocation = {k: round(v * factor, 2) for k, v in validated_allocation.items()}
             # Ensure it sums to 100 after normalization due to potential rounding of the last element
             current_sum = sum(final_allocation.values())
+            diff = round(100.0 - current_sum, 2)
             if abs(diff) > 0.01 and final_allocation: # If diff is noticeable and dict not empty
                  # Add difference to the largest allocation
                  largest_ticker = max(final_allocation, key=final_allocation.get)
