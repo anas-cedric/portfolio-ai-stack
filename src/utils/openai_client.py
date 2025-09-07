@@ -80,7 +80,7 @@ class OpenAIClient:
                 # Responses API for o-series models
                 params: Dict[str, Any] = {"model": self.model}
                 if max_output_tokens is not None:
-                    params["max_completion_tokens"] = max_output_tokens
+                    params["max_output_tokens"] = max_output_tokens
                 # Temperature may not be supported/has different semantics; omit unless explicitly needed
                 if system_instruction:
                     # For responses, prepend system instruction to the input
@@ -199,7 +199,7 @@ class OpenAIClient:
                 input_text = "\n\n".join(user_parts)
                 params: Dict[str, Any] = {"model": self.model}
                 if max_output_tokens is not None:
-                    params["max_completion_tokens"] = max_output_tokens
+                    params["max_output_tokens"] = max_output_tokens
                 response = await self.client.responses.create(input=input_text, **params)
                 response_text = getattr(response, "output_text", None) or ""
                 return {"text": response_text, "model": self.model}
