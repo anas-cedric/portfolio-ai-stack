@@ -250,6 +250,35 @@ function PortfolioQuizContent() {
     
   return (
     <div className={pageContainerClass}>
+      {/* Top-right auth controls visible across steps */}
+      <div className="absolute top-8 right-8 flex items-center space-x-4">
+        {user ? (
+          <>
+            <span className="text-white/80 text-sm">
+              {user.given_name || user.email}
+            </span>
+            <button
+              onClick={() => { window.location.href = '/api/auth/logout'; }}
+              className="text-white/60 hover:text-white/80 text-sm transition-colors"
+            >
+              Sign Out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link href="/api/auth/login">
+              <button className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+                Sign In
+              </button>
+            </Link>
+            <Link href="/api/auth/register">
+              <button className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 backdrop-blur-sm border border-white/20">
+                Get Started
+              </button>
+            </Link>
+          </>
+        )}
+      </div>
       {/* Top-left logo for welcome/stepOne to match home page */}
       {(currentStep === 'welcome' || currentStep === 'stepOne') && (
         <div className="absolute top-8 left-8 flex items-center space-x-3">
