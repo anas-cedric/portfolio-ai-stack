@@ -140,8 +140,8 @@ function DashboardContent() {
             if (rb && rb !== 'unknown') {
               if (rb !== riskProfileStr) setRiskProfileStr(rb);
               updateProfile({ riskProfile: rb });
+              supabaseRiskLoadedRef.current = true;
             }
-            supabaseRiskLoadedRef.current = true;
             // If later you decide to store riskScore in context, you can update it here too
           }
         } catch (e) {
