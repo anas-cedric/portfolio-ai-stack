@@ -163,6 +163,8 @@ export default function ExplainabilityChat({
           metadata: {
             system_instructions: systemInstructions,
             account_context: contextSummary,
+            derived_risk_level: riskProfile,
+            risk_score: typeof riskScore === 'number' ? riskScore : undefined,
             conversation_state: 'complete',
             updated_portfolio: updatedPortfolio,
             user_profile: {

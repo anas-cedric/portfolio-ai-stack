@@ -122,12 +122,33 @@ function DashboardContent() {
   const healthTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isManuallyClosedRef = useRef(false);
   const prevAccountIdRef = useRef<string | null>(null);
+  const supabaseRiskLoadedRef = useRef(false);
 
   // Authentication is handled by server wrapper + middleware; this page assumes an authenticated + authorized user
 
   // Fetch data when user is available
   useEffect(() => {
     if (user?.id) {
+      // Fetch risk bucket from Supabase onboarding and hydrate context immediately
+      (async () => {
+        try {
+          const resp = await fetch('/api/onboarding/me', { credentials: 'include' });
+          if (resp.ok) {
+            const data = await resp.json();
+            const rb = typeof data?.risk_bucket === 'string' ? data.risk_bucket : undefined;
+            const rs = typeof data?.risk_score === 'number' ? data.risk_score : undefined;
+            if (rb && rb !== 'unknown') {
+              if (rb !== riskProfileStr) setRiskProfileStr(rb);
+              updateProfile({ riskProfile: rb });
+            }
+            supabaseRiskLoadedRef.current = true;
+            // If later you decide to store riskScore in context, you can update it here too
+          }
+        } catch (e) {
+          console.warn('Failed to fetch onboarding risk info:', e);
+        }
+      })();
+
       fetchDashboardData();
     }
   }, [user]);
@@ -333,27 +354,29 @@ function DashboardContent() {
       setActivities(activitiesData.activities || []);
       setProposals(proposalsData.proposals || []);
 
-      // Derive risk profile from latest known sources if missing/unknown in context
-      try {
-        let derivedRisk: string | undefined = undefined;
-        const actsArr: Activity[] = Array.isArray(activitiesData.activities) ? activitiesData.activities : [];
-        for (const a of actsArr) {
-          const m = (a as any)?.meta || {};
-          const cand = m.risk_bucket || m.risk_profile || m.derived_risk_level || m.risk_tolerance;
-          if (typeof cand === 'string' && cand.trim()) { derivedRisk = cand.trim(); break; }
+      // Derive risk profile from latest known sources only if Supabase onboarding isn't available
+      if (!supabaseRiskLoadedRef.current) {
+        try {
+          let derivedRisk: string | undefined = undefined;
+          const actsArr: Activity[] = Array.isArray(activitiesData.activities) ? activitiesData.activities : [];
+          for (const a of actsArr) {
+            const m = (a as any)?.meta || {};
+            const cand = m.risk_bucket || m.risk_profile || m.derived_risk_level || m.risk_tolerance;
+            if (typeof cand === 'string' && cand.trim()) { derivedRisk = cand.trim(); break; }
+          }
+          const firstProposal: any = Array.isArray(proposalsData?.proposals) && proposalsData.proposals.length > 0 ? proposalsData.proposals[0] : null;
+          const proposalRisk = firstProposal?.risk_bucket || firstProposal?.plan?.risk_bucket || firstProposal?.plan?.preferences?.risk_bucket;
+          if (!derivedRisk && typeof proposalRisk === 'string' && proposalRisk.trim()) {
+            derivedRisk = proposalRisk.trim();
+          }
+          if ((!riskProfileStr || riskProfileStr === 'unknown') && derivedRisk && derivedRisk !== riskProfileStr) {
+            setRiskProfileStr(derivedRisk);
+            // Persist to user profile for reuse across pages
+            updateProfile({ riskProfile: derivedRisk });
+          }
+        } catch (e) {
+          // Non-fatal: risk derivation is best-effort
         }
-        const firstProposal: any = Array.isArray(proposalsData?.proposals) && proposalsData.proposals.length > 0 ? proposalsData.proposals[0] : null;
-        const proposalRisk = firstProposal?.risk_bucket || firstProposal?.plan?.risk_bucket || firstProposal?.plan?.preferences?.risk_bucket;
-        if (!derivedRisk && typeof proposalRisk === 'string' && proposalRisk.trim()) {
-          derivedRisk = proposalRisk.trim();
-        }
-        if ((!riskProfileStr || riskProfileStr === 'unknown') && derivedRisk && derivedRisk !== riskProfileStr) {
-          setRiskProfileStr(derivedRisk);
-          // Persist to user profile for reuse across pages
-          updateProfile({ riskProfile: derivedRisk });
-        }
-      } catch (e) {
-        // Non-fatal: risk derivation is best-effort
       }
 
       // Extract portfolio state from latest activities
