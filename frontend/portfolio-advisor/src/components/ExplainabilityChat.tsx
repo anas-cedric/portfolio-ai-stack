@@ -76,6 +76,29 @@ export default function ExplainabilityChat({
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string>("");
 
+  // Persist risk profile to Supabase when available
+  useEffect(() => {
+    const saveRisk = async () => {
+      try {
+        if (riskProfile && riskProfile !== 'unknown') {
+          await fetch('/api/onboarding/risk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              risk_bucket: riskProfile,
+              risk_score: typeof riskScore === 'number' ? riskScore : undefined,
+            }),
+          });
+        }
+      } catch (e) {
+        // Non-blocking
+        console.warn('Failed to persist risk from ExplainabilityChat:', e);
+      }
+    };
+    saveRisk();
+  }, [riskProfile, riskScore]);
+
   const contextSummary = useMemo(() => {
     const pos = (holdings?.positions || [])
       .sort((a, b) => b.percent - a.percent)

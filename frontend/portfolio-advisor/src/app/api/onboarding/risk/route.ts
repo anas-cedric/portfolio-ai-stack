@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
-import { getOrCreateUserOnboardingState, updateUserOnboardingState } from '@/lib/supabase';
+import { saveRiskProfile, getOrCreateUserOnboardingState } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,26 +18,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const quiz_data = body?.quiz_data;
-    const portfolio_preferences = body?.portfolio_preferences;
-    const risk_bucket: string | undefined = portfolio_preferences?.risk_bucket || quiz_data?.risk_bucket;
-    const risk_score: number | undefined = (typeof portfolio_preferences?.risk_score === 'number' ? portfolio_preferences.risk_score : undefined) 
-      ?? (typeof quiz_data?.risk_score === 'number' ? quiz_data.risk_score : undefined);
+    const risk_bucket: string | null = typeof body?.risk_bucket === 'string' ? body.risk_bucket : null;
+    const risk_score: number | null = typeof body?.risk_score === 'number' ? body.risk_score : null;
 
-    // Ensure onboarding row exists
+    // Ensure onboarding row exists and then upsert risk
     await getOrCreateUserOnboardingState(user.id);
-
-    // Update state to quiz_completed and optionally persist quiz data
-    const onboarding = await updateUserOnboardingState(user.id, 'quiz_completed', {
-      quiz_data,
-      portfolio_preferences,
-      risk_bucket,
-      risk_score,
-    });
+    const onboarding = await saveRiskProfile(user.id, risk_bucket ?? undefined, risk_score ?? undefined);
 
     return NextResponse.json({ success: true, onboarding });
   } catch (error: any) {
-    console.error('Failed to mark quiz as completed:', error);
+    console.error('Failed to save risk profile:', error);
     return NextResponse.json({ error: error?.message || 'Internal error' }, { status: 500 });
   }
 }

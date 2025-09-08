@@ -107,6 +107,8 @@ export type UserOnboarding = {
   onboarding_state: OnboardingState;
   quiz_data?: any;
   portfolio_preferences?: any;
+  risk_bucket?: string | null;
+  risk_score?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -134,6 +136,60 @@ export async function getUserOnboardingState(kindeUserId: string): Promise<UserO
       return null;
     }
     console.error('Failed to get user onboarding state:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Save or update a user's risk profile into user_onboarding.
+ * - Writes dedicated columns risk_bucket, risk_score (if present in schema)
+ * - Mirrors into portfolio_preferences JSON for backward compatibility
+ */
+export async function saveRiskProfile(
+  kindeUserId: string,
+  riskBucket?: string | null,
+  riskScore?: number | null
+): Promise<UserOnboarding | void> {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping risk save');
+    return;
+  }
+
+  // Ensure row exists
+  const existing = await getUserOnboardingState(kindeUserId);
+  if (!existing) {
+    await createUserOnboardingState(kindeUserId, 'new');
+  }
+
+  const updateData: any = {
+    updated_at: new Date().toISOString(),
+  };
+  if (typeof riskBucket === 'string' && riskBucket.trim()) {
+    updateData.risk_bucket = riskBucket;
+  }
+  if (typeof riskScore === 'number' && Number.isFinite(riskScore)) {
+    updateData.risk_score = riskScore;
+  }
+
+  // Merge portfolio_preferences JSON
+  const mergedPrefs = {
+    ...(existing?.portfolio_preferences || {}),
+    ...(typeof riskBucket === 'string' ? { risk_bucket: riskBucket } : {}),
+    ...(typeof riskScore === 'number' ? { risk_score: riskScore } : {}),
+  };
+  updateData.portfolio_preferences = mergedPrefs;
+
+  const { data, error } = await supabase
+    .from('user_onboarding')
+    .update(updateData)
+    .eq('kinde_user_id', kindeUserId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to save risk profile:', error);
     throw error;
   }
 
@@ -178,6 +234,8 @@ export async function updateUserOnboardingState(
   additionalData?: {
     quiz_data?: any;
     portfolio_preferences?: any;
+    risk_bucket?: string | null;
+    risk_score?: number | null;
   }
 ): Promise<UserOnboarding> {
   if (!supabase) {
@@ -202,6 +260,21 @@ export async function updateUserOnboardingState(
   }
   if (additionalData?.portfolio_preferences) {
     updateData.portfolio_preferences = additionalData.portfolio_preferences;
+  }
+  if (typeof additionalData?.risk_bucket === 'string') {
+    updateData.risk_bucket = additionalData.risk_bucket;
+    // also mirror into JSON if present/mergeable
+    updateData.portfolio_preferences = {
+      ...(updateData.portfolio_preferences || {}),
+      risk_bucket: additionalData.risk_bucket
+    };
+  }
+  if (typeof additionalData?.risk_score === 'number') {
+    updateData.risk_score = additionalData.risk_score;
+    updateData.portfolio_preferences = {
+      ...(updateData.portfolio_preferences || {}),
+      risk_score: additionalData.risk_score
+    };
   }
 
   const { data, error } = await supabase

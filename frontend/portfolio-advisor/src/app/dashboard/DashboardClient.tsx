@@ -373,6 +373,17 @@ function DashboardContent() {
             setRiskProfileStr(derivedRisk);
             // Persist to user profile for reuse across pages
             updateProfile({ riskProfile: derivedRisk });
+            // Also persist to Supabase so future sessions have it immediately
+            try {
+              await fetch('/api/onboarding/risk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ risk_bucket: derivedRisk })
+              });
+            } catch (e) {
+              console.warn('Failed to persist derived risk:', e);
+            }
           }
         } catch (e) {
           // Non-fatal: risk derivation is best-effort

@@ -212,6 +212,7 @@ function PortfolioQuizContent() {
           quiz_data: { ...userAnswers, ...answers, age: userAge },
           portfolio_preferences: {
             risk_bucket: response.data?.risk_bucket,
+            risk_score: typeof response.data?.risk_score === 'number' ? response.data.risk_score : undefined,
             target_weights: response.data?.weights || response.data?.target_weights,
           },
         };

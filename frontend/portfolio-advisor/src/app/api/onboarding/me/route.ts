@@ -19,10 +19,12 @@ export async function GET(_request: NextRequest) {
 
     const onboarding = await getUserOnboardingState(user.id);
 
-    // Derive risk bucket/score from stored preferences if present
+    // Prefer dedicated columns if available; fall back to JSON
     const prefs = (onboarding as any)?.portfolio_preferences || {};
-    const risk_bucket = typeof prefs?.risk_bucket === 'string' ? prefs.risk_bucket : null;
-    const risk_score = typeof prefs?.risk_score === 'number' ? prefs.risk_score : null;
+    const risk_bucket = (onboarding as any)?.risk_bucket
+      ?? (typeof prefs?.risk_bucket === 'string' ? prefs.risk_bucket : null);
+    const risk_score = (onboarding as any)?.risk_score
+      ?? (typeof prefs?.risk_score === 'number' ? prefs.risk_score : null);
 
     return NextResponse.json({
       onboarding_state: onboarding?.onboarding_state ?? 'new',

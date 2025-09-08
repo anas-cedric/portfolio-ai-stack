@@ -132,4 +132,10 @@ CREATE TRIGGER trigger_update_user_onboarding_updated_at
   BEFORE UPDATE ON user_onboarding
   FOR EACH ROW EXECUTE FUNCTION update_user_onboarding_updated_at();
 
+-- 9.1) Risk fields on user_onboarding (for faster access and consistency)
+ALTER TABLE user_onboarding
+  ADD COLUMN IF NOT EXISTS risk_bucket text;
+ALTER TABLE user_onboarding
+  ADD COLUMN IF NOT EXISTS risk_score integer;
+
 -- End of Cedric schema additions

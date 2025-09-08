@@ -1269,6 +1269,12 @@ async def generate_portfolio_from_wizard(
 
     logger.info(f"Derived risk level from wizard: {derived_risk_level}")
 
+    # Also compute numeric risk score for persistence/telemetry
+    try:
+        risk_score_val, _level = calculate_risk_score_and_level(answers_str)
+    except Exception:
+        risk_score_val = 0
+
     # Map questionnaire risk level to glide path key
     glide_path_risk_key = QUESTIONNAIRE_TO_GLIDE_PATH_MAP.get(derived_risk_level)
     if not glide_path_risk_key:
@@ -1395,6 +1401,13 @@ async def generate_portfolio_from_wizard(
         "portfolioData": portfolio_data, 
         "userPreferences": user_preferences
     }
+
+    # Include risk info at top-level for frontend convenience
+    try:
+        final_response_data["risk_bucket"] = glide_path_risk_key
+        final_response_data["risk_score"] = int(risk_score_val) if isinstance(risk_score_val, (int, float)) else None
+    except Exception:
+        pass
 
     # Save user record if personal data provided
     if request.firstName or request.lastName or request.birthday:
