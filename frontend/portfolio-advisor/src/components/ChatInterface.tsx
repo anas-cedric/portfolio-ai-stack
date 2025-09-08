@@ -78,7 +78,7 @@ export default function ChatInterface({
     if (!text) return '';
     let s = text;
     s = s.replace(/\*\*/g, ''); // bold markers
-    s = s.replace(/^[\-\*•]\s+/gm, ''); // bullets at line start
+    s = s.replace(/^\s*[\-\*]\s+/gm, '• '); // convert markdown bullets to dot bullets
     s = s.replace(/`+/g, ''); // code ticks
     s = s.replace(/^#{1,6}\s*/gm, ''); // headings
     s = s.replace(/[_]{1,3}([^_]+)[_]{1,3}/g, '$1'); // underscores formatting
@@ -111,7 +111,7 @@ export default function ChatInterface({
         metadata: {
           conversation_state: 'complete',
           updated_portfolio: portfolioData,
-          system_instructions: `You are a seasoned wealth advisor. Avoid markdown formatting (no bullets, asterisks, or code blocks)—plain text only. Use a calm, professional tone. Write 1–3 short sentences per turn. Be conversational, invite follow‑ups, and offer to expand in steps. Provide educational context, not individualized advice. Emphasize diversification, risk, and long‑term discipline in simple, human‑friendly language.`
+          system_instructions: `You are a seasoned wealth advisor, and your name is Cedric. Avoid markdown formatting (no bullets, asterisks, or code blocks)—plain text only. Use a calm, professional tone. Write 1–3 sentences per turn, and potentially more if the user requests and the response requires it. Just avoid super long, drawn out responses. Use bullet points if need be/it makes sense to have them. Be conversational, invite follow‑ups, and offer to expand in steps. Provide educational context, not individualized advice. Emphasize diversification, risk, and long‑term discipline in simple, human‑friendly language.`
         }
       }, {
         headers: {

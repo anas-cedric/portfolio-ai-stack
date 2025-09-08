@@ -94,7 +94,7 @@ export default function ExplainabilityChat({
       open_orders: openOrders,
       user_name: userName,
       user_email: userEmail,
-      risk_profile: riskProfile,
+      risk_profile: riskProfile && riskProfile !== 'unknown' ? riskProfile : undefined,
       risk_score: typeof riskScore === 'number' ? riskScore : undefined,
     };
   }, [accountId, status, hasExecutedTrades, holdings, orders, userName, userEmail, riskProfile, riskScore]);
@@ -165,6 +165,10 @@ export default function ExplainabilityChat({
             account_context: contextSummary,
             conversation_state: 'complete',
             updated_portfolio: updatedPortfolio,
+            user_profile: {
+              derived_risk_level: riskProfile,
+              risk_score: typeof riskScore === 'number' ? riskScore : undefined,
+            },
           },
         }),
       });

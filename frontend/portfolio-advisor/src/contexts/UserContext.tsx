@@ -30,21 +30,41 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthLoading) {
+      // Hydrate from localStorage if present
+      let saved: UserProfile | null = null;
+      try {
+        const raw = typeof window !== 'undefined' ? window.localStorage.getItem('cedric_user_profile') : null;
+        if (raw) {
+          saved = JSON.parse(raw);
+        }
+      } catch {}
+
       if (user) {
-        // Initialize profile from Kinde user data
+        // Initialize/merge profile with Kinde user data
         const initialProfile: UserProfile = {
-          firstName: user.given_name || undefined,
-          lastName: user.family_name || undefined,
-          // Age, birthday, etc. will be set during onboarding flow
+          ...saved,
+          firstName: user.given_name || saved?.firstName || undefined,
+          lastName: user.family_name || saved?.lastName || undefined,
+          // Age, birthday, riskProfile, etc. may be in saved
         };
         setProfile(initialProfile);
+      } else if (saved) {
+        setProfile(saved);
       }
       setIsLoading(false);
     }
   }, [user, isAuthLoading]);
 
   const updateProfile = (updates: Partial<UserProfile>) => {
-    setProfile(prev => prev ? { ...prev, ...updates } : updates);
+    setProfile(prev => {
+      const next = prev ? { ...prev, ...updates } : (updates as UserProfile);
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('cedric_user_profile', JSON.stringify(next));
+        }
+      } catch {}
+      return next;
+    });
   };
 
   const hasCompletedOnboarding = Boolean(profile?.onboardingCompleted);
