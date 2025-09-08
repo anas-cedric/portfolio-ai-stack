@@ -10,6 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import PortfolioDonutChart from '@/components/PortfolioDonutChart';
 import ExplainabilityChat from '@/components/ExplainabilityChat';
+import { useUserProfile } from '@/contexts/UserContext';
  
 
 type Activity = {
@@ -98,6 +99,7 @@ const ActivityIcon = ({ type }: { type: Activity['type'] }) => {
 function DashboardContent() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useKindeBrowserClient();
+  const { profile } = useUserProfile();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [portfolioState, setPortfolioState] = useState<PortfolioState | null>(null);
@@ -887,6 +889,7 @@ function DashboardContent() {
                     orders={orders}
                     userName={user?.given_name || user?.email || ''}
                     userEmail={user?.email || ''}
+                    riskProfile={profile?.riskProfile}
                   />
                 </div>
               );

@@ -38,6 +38,8 @@ export type ExplainabilityChatProps = {
   apiKey?: string;
   userName?: string;
   userEmail?: string;
+  riskProfile?: string;
+  riskScore?: number;
 };
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
@@ -64,6 +66,8 @@ export default function ExplainabilityChat({
   apiKey = process.env.NEXT_PUBLIC_API_KEY || "test_api_key_for_development",
   userName,
   userEmail,
+  riskProfile,
+  riskScore,
 }: ExplainabilityChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   // Raw, untrimmed history for backend context
@@ -90,8 +94,10 @@ export default function ExplainabilityChat({
       open_orders: openOrders,
       user_name: userName,
       user_email: userEmail,
+      risk_profile: riskProfile,
+      risk_score: typeof riskScore === 'number' ? riskScore : undefined,
     };
-  }, [accountId, status, hasExecutedTrades, holdings, orders]);
+  }, [accountId, status, hasExecutedTrades, holdings, orders, userName, userEmail, riskProfile, riskScore]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -106,6 +112,8 @@ export default function ExplainabilityChat({
     e.preventDefault();
     if (!enabled || isLoading || !input.trim()) return;
 
+    // Freeze current history so we don't send the just-typed message twice
+    const historyForSend = rawHistory.slice();
     const newUserMsg: ChatMessage = { role: "user", content: input.trim() };
     setMessages((prev) => [...prev, newUserMsg]);
     setRawHistory((prev) => [...prev, newUserMsg]);
@@ -114,11 +122,11 @@ export default function ExplainabilityChat({
 
     try {
       const systemInstructions = [
-        "You are an explainability assistant for a live brokerage portfolio.",
+        "You are a seasoned wealth advisor providing explainability for a live brokerage portfolio.",
         "Use the provided account_context (holdings, cash, portfolio_value, open_orders, status).",
         "Reflect pending trades and executed positions if present.",
         "Avoid markdown formatting: no bullets, asterisks, or code blocks. Plain text only.",
-        "Be conversational. Use 1–3 short sentences per turn. Offer to expand if the user wants more.",
+        "Use a calm, professional tone. Be conversational. Use 1–3 short sentences per turn. Offer to expand if the user wants more.",
         "Do not provide individualized investment advice. Educational information only.",
         "You are not an RIA. If advice is implied, include a brief disclaimer.",
       ].join(" \n");
@@ -151,7 +159,7 @@ export default function ExplainabilityChat({
           conversation_id: conversationId,
           user_message: newUserMsg.content,
           // Send untrimmed message history to backend for better context
-          conversation_history: rawHistory.map((m) => ({ role: m.role, content: m.content })),
+          conversation_history: historyForSend.map((m) => ({ role: m.role, content: m.content })),
           metadata: {
             system_instructions: systemInstructions,
             account_context: contextSummary,

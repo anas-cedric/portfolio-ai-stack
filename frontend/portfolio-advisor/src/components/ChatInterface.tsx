@@ -49,7 +49,7 @@ export default function ChatInterface({
     setLocalUserPreferences(userPreferences);
     if (portfolioData && messages.length === 0) {
         if (portfolioData) {
-          const initialAssistantMsg = `Here’s your allocation. I’ll keep it concise and explain in small chunks. Ask for more if you want detail.`;
+          const initialAssistantMsg = `Here’s your allocation. I’ll walk you through it like a seasoned wealth advisor—concise, plain language, and in small steps. Ask for more detail anytime.`;
           const initial = { content: initialAssistantMsg, role: 'assistant' as const };
           setMessages([initial]);
           setRawHistory([initial]);
@@ -103,16 +103,15 @@ export default function ChatInterface({
     setIsLoading(true);
     
     try {
-      const historyForSend = [...rawHistory, newUserMessage];
       const response = await axios.post(`/api/portfolio-chat`, {
         conversation_id: conversationId,
         user_message: messageContent,
-        // Send untrimmed history for better context (include the latest user msg)
-        conversation_history: historyForSend.map(m => ({ role: m.role, content: m.content })),
+        // Send untrimmed history for better context (do NOT include the latest user msg; backend receives it in user_message)
+        conversation_history: rawHistory.map(m => ({ role: m.role, content: m.content })),
         metadata: {
           conversation_state: 'complete',
           updated_portfolio: portfolioData,
-          system_instructions: `You are a professional wealth assistant. Avoid markdown formatting (no bullets, asterisks, or code blocks). Use plain sentences, 1–3 short sentences per turn. Be conversational and offer to expand or go deeper on request. Provide educational context, not individualized advice. Focus on simple, human-friendly explanations.`
+          system_instructions: `You are a seasoned wealth advisor. Avoid markdown formatting (no bullets, asterisks, or code blocks)—plain text only. Use a calm, professional tone. Write 1–3 short sentences per turn. Be conversational, invite follow‑ups, and offer to expand in steps. Provide educational context, not individualized advice. Emphasize diversification, risk, and long‑term discipline in simple, human‑friendly language.`
         }
       }, {
         headers: {
