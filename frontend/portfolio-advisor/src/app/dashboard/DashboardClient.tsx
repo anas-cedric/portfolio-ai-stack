@@ -10,6 +10,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import PortfolioDonutChart from '@/components/PortfolioDonutChart';
 import ExplainabilityChat from '@/components/ExplainabilityChat';
+import EventsFeed from '@/components/EventsFeed';
 import { useUserProfile } from '@/contexts/UserContext';
  
 
@@ -113,6 +114,9 @@ function DashboardContent() {
   const [isHoldingsLoading, setIsHoldingsLoading] = useState(false);
   const [orders, setOrders] = useState<OrdersResponse | null>(null);
   const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewResult, setPreviewResult] = useState<any | null>(null);
   const eventSrcRef = useRef<EventSource | null>(null);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -325,6 +329,63 @@ function DashboardContent() {
       console.warn('Failed to fetch orders:', e);
     } finally {
       setIsOrdersLoading(false);
+    }
+  };
+
+  // Build the updated_portfolio payload expected by the rebalancer endpoints
+  const buildUpdatedPortfolioPayload = () => {
+    if (!holdings || !portfolioState?.weights) return null;
+    const h = [
+      ...(holdings.positions || []).map((p) => ({
+        ticker: p.symbol,
+        name: p.symbol,
+        value: Number(p.market_value) || 0,
+        percentage: Number(p.percent) || 0,
+      })),
+      {
+        ticker: 'CASH',
+        name: 'Cash',
+        value: Number(holdings.cash) || 0,
+        percentage: Number(holdings.cash_percent) || 0,
+      },
+    ];
+    const allocations: Record<string, number> = {};
+    for (const w of (portfolioState?.weights || [])) {
+      if (!w?.symbol) continue;
+      allocations[w.symbol.toUpperCase()] = Number(w.weight) || 0;
+    }
+    return { holdings: h, allocations };
+  };
+
+  // Trigger a preview rebalance and capture the result
+  const handlePreviewRebalance = async () => {
+    setPreviewError(null);
+    setPreviewResult(null);
+    try {
+      const updated_portfolio = buildUpdatedPortfolioPayload();
+      if (!updated_portfolio) {
+        setPreviewError('Missing holdings or target weights.');
+        return;
+      }
+      setPreviewLoading(true);
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY || 'test_api_key_for_development';
+      const res = await fetch('/api/rebalance/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({ updated_portfolio }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.detail || data?.error || 'Failed to preview rebalance');
+      }
+      setPreviewResult(data);
+    } catch (e: any) {
+      setPreviewError(e?.message || 'Failed to preview rebalance');
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -750,7 +811,8 @@ function DashboardContent() {
                     pairs.push({ name: 'Cash', value: cashPct });
                     if (pairs.length === 1) {
                       // Fallback to target weights if orders had no notionals
-                      const nonCash = (portfolioState!.weights || []).filter((w) => w.symbol !== 'CASH');
+                      const weights = portfolioState?.weights || [];
+                      const nonCash = weights.filter((w) => w.symbol !== 'CASH');
                       const sumNonCash = nonCash.reduce((s, w) => s + (w.weight || 0), 0);
                       const cashWeight = Math.max(0, 100 - sumNonCash);
                       pairs = [
@@ -787,6 +849,57 @@ function DashboardContent() {
                     </div>
                   );
                 })()}
+              </CardContent>
+            </Card>
+
+            {/* Rebalance Preview */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Rebalance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Button onClick={handlePreviewRebalance} disabled={previewLoading}>
+                    {previewLoading ? 'Previewing…' : 'Preview Rebalance'}
+                  </Button>
+                  {previewError && (
+                    <div className="text-sm text-red-600">{previewError}</div>
+                  )}
+                </div>
+
+                {previewResult && (
+                  <div className="text-sm text-[#00121F] space-y-2">
+                    <div className="font-medium">{previewResult.summary}</div>
+                    {Array.isArray(previewResult.trades) && previewResult.trades.length > 0 ? (
+                      <div className="text-xs border rounded p-2 bg-slate-50">
+                        {previewResult.trades.slice(0, 6).map((t: any, idx: number) => (
+                          <div key={idx} className="flex justify-between py-0.5">
+                            <span className="font-medium">{t.ticker}</span>
+                            <span className="text-[#00121F]/70">{t.side} {t.shares ?? ''} @ {t.price ? `$${t.price}` : 'mkt'} ({t.notional ? `$${t.notional}` : ''})</span>
+                          </div>
+                        ))}
+                        {previewResult.trades.length > 6 && (
+                          <div className="text-[#00121F]/60 mt-1">+{previewResult.trades.length - 6} more…</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-[#00121F]/70">No trades proposed.</div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Activity Feed */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EventsFeed />
               </CardContent>
             </Card>
 

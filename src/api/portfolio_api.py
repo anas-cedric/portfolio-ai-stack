@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from src.utils.openai_client import openai_client, OpenAIClient  # import class for extra model
 from src.prompts.financial_prompts import FinancialPrompts # Adjusted import
 from src.utils.auth import get_api_key # Corrected absolute import
+from src.engine.rebalancer import preview_rebalance_decision
 
 # --- Import Glide Path Data ---
 from src.data.glide_path_allocations import GLIDE_PATH_ALLOCATIONS
@@ -512,6 +513,30 @@ class ChatResponse(BaseModel):
     )
     # Structured portfolio data returned when generation completes
     updated_portfolio: Optional[Dict[str, Any]] = None
+
+# --- Rebalancer Request/Response Models ---
+class RebalanceRequest(BaseModel):
+    updated_portfolio: Dict[str, Any]
+    drift_threshold: float = 0.03  # 3%
+    min_trade_usd: float = 50.0
+    turnover_cap: float = 0.15     # 15% of portfolio value
+    fractional: bool = True
+    prices: Optional[Dict[str, float]] = None
+
+class RebalanceResponse(BaseModel):
+    decision: str
+    max_drift_pct: float | None = None
+    max_drift_symbol: str | None = None
+    drift_threshold_pct: float | None = None
+    drift_map: Dict[str, float] | None = None
+    portfolio_value: float | None = None
+    turnover: float | None = None
+    scaled: bool | None = None
+    scale_factor: float | None = None
+    trades: List[Dict[str, Any]] | None = None
+    prices: Dict[str, float] | None = None
+    decision_hash: str | None = None
+    summary: str | None = None
 
 # --- Wizard Request Model ---
 class WizardRequest(BaseModel):
@@ -1451,3 +1476,34 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors()},
     )
 # --- End Exception Handler ---
+
+# --- Rebalancer Endpoints ---
+@app.post("/api/rebalance/preview", response_model=RebalanceResponse)
+async def rebalance_preview(request: RebalanceRequest, api_key: str = Depends(get_api_key)):
+    try:
+        result = preview_rebalance_decision(
+            updated_portfolio=request.updated_portfolio,
+            drift_threshold=request.drift_threshold,
+            min_trade_usd=request.min_trade_usd,
+            turnover_cap=request.turnover_cap,
+            fractional=request.fractional,
+            prices=request.prices,
+        )
+        # If engine returned error, map into 400
+        if result.get("decision") == "error":
+            raise HTTPException(status_code=400, detail=result.get("error", "Invalid input"))
+        return result  # Pydantic will coerce types
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to compute rebalance preview")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/rebalance/run", response_model=RebalanceResponse)
+async def rebalance_run(request: RebalanceRequest, api_key: str = Depends(get_api_key)):
+    """
+    For MVP, this is equivalent to preview and does not place orders.
+    Client (Next.js) can persist an event and/or proceed to order placement as a separate step.
+    """
+    return await rebalance_preview(request, api_key)

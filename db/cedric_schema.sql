@@ -138,4 +138,19 @@ ALTER TABLE user_onboarding
 ALTER TABLE user_onboarding
   ADD COLUMN IF NOT EXISTS risk_score integer;
 
+-- 10) Events table for lifecycle logging (rebalance, deposits, executions, notes)
+CREATE TABLE IF NOT EXISTS events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kinde_user_id text NOT NULL,
+  account_id text,
+  ts timestamptz NOT NULL DEFAULT now(),
+  type text NOT NULL,
+  summary text NOT NULL,
+  description text,
+  meta_json jsonb NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_user_ts ON events(kinde_user_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_events_account_ts ON events(account_id, ts DESC);
+
 -- End of Cedric schema additions

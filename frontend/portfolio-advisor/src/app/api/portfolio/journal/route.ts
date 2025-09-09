@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { createJournal, type JournalRequest } from "@/lib/alpacaBroker";
-import { logActivity } from "@/lib/supabase";
+import { logActivity, emitEvent } from "@/lib/supabase";
 
 export async function POST(req: NextRequest) {
   let userId: string | null = null;
@@ -74,6 +74,28 @@ export async function POST(req: NextRequest) {
       },
       to_account
     );
+
+    // Emit high-level DEPOSIT event (cash journals only)
+    try {
+      if (entry_type === "JNLC") {
+        await emitEvent({
+          kindeUserId: userId,
+          accountId: to_account,
+          type: 'DEPOSIT',
+          summary: `Cash journal posted: $${amount}`,
+          description: `Transferred $${amount} from ${from_account} to ${to_account}.`,
+          meta: {
+            journal_entry_type: entry_type,
+            from_account,
+            to_account,
+            amount,
+            journal_id: result?.id,
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to emit DEPOSIT event:', e);
+    }
 
     return NextResponse.json({ success: true, journal: result });
   } catch (error: any) {

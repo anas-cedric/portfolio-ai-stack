@@ -439,3 +439,78 @@ export async function saveCedricChatMessage(
     throw error;
   }
 }
+
+// --- Events helpers ---
+export type EventType =
+  | 'ALLOCATION_PLACED'
+  | 'EXECUTED'
+  | 'DEPOSIT'
+  | 'DRIFT_CHECK_NO_ACTION'
+  | 'DRIFT_REBALANCE'
+  | 'MARKET_NOTE'
+  | 'MACRO_NOTE';
+
+export async function emitEvent(params: {
+  kindeUserId: string;
+  accountId?: string | null;
+  type: EventType;
+  summary: string;
+  description?: string | null;
+  meta?: any;
+}) {
+  if (!supabase) {
+    console.warn('Supabase not configured, skipping emitEvent');
+    return;
+  }
+  const { kindeUserId, accountId, type, summary, description, meta } = params;
+  const { error } = await supabase
+    .from('events')
+    .insert([{ 
+      kinde_user_id: kindeUserId,
+      account_id: accountId || null,
+      type,
+      summary,
+      description: description || null,
+      meta_json: meta || {}
+    }]);
+  if (error) {
+    console.error('Failed to emit event:', error);
+    // non-fatal
+  }
+}
+
+export async function getEventsByUser(kindeUserId: string, limit = 50) {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning empty events');
+    return [];
+  }
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('kinde_user_id', kindeUserId)
+    .order('ts', { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error('Failed to fetch events:', error);
+    throw error;
+  }
+  return data || [];
+}
+
+export async function getEventsByAccount(accountId: string, limit = 50) {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning empty events');
+    return [];
+  }
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('ts', { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error('Failed to fetch events by account:', error);
+    throw error;
+  }
+  return data || [];
+}
